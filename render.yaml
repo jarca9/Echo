@@ -2,6 +2,7 @@ services:
   - type: web
     name: quantify-trading-journal
     env: python
+    runtime: python-3.12
     buildCommand: pip install -r requirements.txt
     startCommand: python app.py
     envVars:

@@ -1,4 +1,4 @@
-# Quantify - Options Trading Journal
+# Echo - Trading Journal
 
 A powerful options trading journal that works **without any API keys**. Track your trades manually or import from CSV files exported from Webull.
 

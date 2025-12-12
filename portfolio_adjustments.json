@@ -1,0 +1,27 @@
+[
+  {
+    "id": "0bcbf748-4f54-4b97-9c69-9bfb5d67642d",
+    "date": "2025-11-19",
+    "amount": 55.0,
+    "label": "Manual adj (Nov 19 P&L)",
+    "apply_to": "since_start",
+    "created_at": "2025-11-25T07:40:00"
+  },
+  {
+    "id": "5abf36f4-8935-4fce-b345-969c40958086",
+    "date": "2025-11-20",
+    "amount": 7.0,
+    "label": "Manual adj (Nov 20 P&L)",
+    "apply_to": "since_start",
+    "created_at": "2025-11-25T07:40:00"
+  },
+  {
+    "id": "3cd98863-7e30-499f-864e-5d56458c2982",
+    "date": "2025-11-25",
+    "amount": 7.0,
+    "label": "Manual adj (Nov 25 latest)",
+    "apply_to": "latest",
+    "created_at": "2025-11-25T07:44:00"
+  }
+]
+

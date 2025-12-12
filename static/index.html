@@ -1,0 +1,4950 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Echo - Options Trading Journal</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #0a0e27;
+            --bg-secondary: #141b2d;
+            --bg-tertiary: #1a2332;
+            --bg-card: #1e2838;
+            --text-primary: #e4e6eb;
+            --text-secondary: #b0b3b8;
+            --text-tertiary: #8b8f96;
+            --accent-green: #00d4aa;
+            --accent-red: #ff4757;
+            --accent-blue: #5352ed;
+            --accent-blue-hover: #6c5ce7;
+            --border-color: #2d3748;
+            --border-light: #3a4556;
+            --hover-bg: #252d42;
+            --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.15);
+            --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.2);
+            --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.25);
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            padding: 0;
+            line-height: 1.6;
+            overflow: hidden;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        .header {
+            background: linear-gradient(135deg, var(--bg-secondary) 0%, #1a2332 100%);
+            border-bottom: 1px solid var(--border-color);
+            padding: 12px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: var(--shadow-sm);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            min-height: 120px;
+            max-height: 120px;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+        }
+
+        .header-left .sidebar-logo {
+            margin-bottom: 0;
+            padding-bottom: 0;
+            border-bottom: none;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 24px;
+        }
+
+        .header-controls {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .date-range-selector {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9em;
+            color: var(--text-primary);
+            transition: all 0.2s ease;
+        }
+
+        .date-range-selector:hover {
+            background: var(--hover-bg);
+            border-color: var(--border-light);
+        }
+
+        .calendar-icon {
+            font-size: 1em;
+        }
+
+        .account-selector select {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 8px 12px;
+            font-size: 0.9em;
+            cursor: pointer;
+        }
+
+        .user-menu {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+        }
+
+        .user-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2em;
+            transition: all 0.2s ease;
+        }
+
+        .user-icon:hover {
+            background: var(--hover-bg);
+            border-color: var(--border-light);
+        }
+
+        .settings-menu-container {
+            position: relative;
+        }
+
+        .settings-button {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 10px 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-primary);
+            transition: all 0.2s ease;
+        }
+
+        .settings-button:hover {
+            background: var(--hover-bg);
+            border-color: var(--border-light);
+        }
+
+        .settings-button svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        .settings-dropdown {
+            position: absolute;
+            top: calc(100% + 8px);
+            right: 0;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            min-width: 200px;
+            box-shadow: var(--shadow-lg);
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-10px);
+            transition: all 0.2s ease;
+            z-index: 1000;
+            overflow: hidden;
+        }
+
+        .settings-dropdown.show {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+
+        .settings-menu-item-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Authentication Overlay */
+        .auth-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(10, 14, 39, 0.85);
+            backdrop-filter: blur(10px);
+            z-index: 10000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: opacity 0.3s ease;
+        }
+
+        .auth-overlay.hidden {
+            opacity: 0;
+            pointer-events: none;
+            display: none;
+        }
+
+        .auth-container {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 40px;
+            max-width: 450px;
+            width: 90%;
+            box-shadow: var(--shadow-lg);
+            position: relative;
+        }
+
+        .auth-container h1 {
+            font-size: 2em;
+            font-weight: 700;
+            margin-bottom: 8px;
+            color: var(--text-primary);
+            text-align: center;
+        }
+
+        .auth-container .subtitle {
+            text-align: center;
+            color: var(--text-secondary);
+            margin-bottom: 32px;
+            font-size: 0.95em;
+        }
+
+        .auth-tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 24px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .auth-tab {
+            flex: 1;
+            padding: 12px;
+            text-align: center;
+            cursor: pointer;
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 1em;
+            font-weight: 500;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s ease;
+        }
+
+        .auth-tab.active {
+            color: var(--accent-blue);
+            border-bottom-color: var(--accent-blue);
+            font-weight: 600;
+        }
+
+        .auth-tab:hover {
+            color: var(--text-primary);
+        }
+
+        .auth-form {
+            display: none;
+        }
+
+        .auth-form.active {
+            display: block;
+        }
+
+        .auth-form .form-group {
+            margin-bottom: 20px;
+        }
+
+        .auth-form label {
+            display: block;
+            margin-bottom: 8px;
+            color: var(--text-primary);
+            font-weight: 500;
+            font-size: 0.9em;
+        }
+
+        .auth-form input {
+            width: 100%;
+            padding: 12px;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 1em;
+            transition: all 0.2s ease;
+        }
+
+        .auth-form input:focus {
+            outline: none;
+            border-color: var(--accent-blue);
+            box-shadow: 0 0 0 3px rgba(83, 82, 237, 0.1);
+        }
+
+        .auth-error {
+            color: var(--accent-red);
+            font-size: 0.85em;
+            margin-bottom: 16px;
+            padding: 10px;
+            background: rgba(255, 71, 87, 0.1);
+            border: 1px solid var(--accent-red);
+            border-radius: 6px;
+            display: none;
+        }
+
+        .auth-error.show {
+            display: block;
+        }
+
+        .auth-submit-btn {
+            width: 100%;
+            padding: 14px;
+            background: var(--accent-blue);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            margin-top: 8px;
+        }
+
+        .auth-submit-btn:hover {
+            background: var(--accent-blue-hover);
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .auth-submit-btn:active {
+            transform: translateY(0);
+        }
+
+        .auth-switch-link {
+            text-align: center;
+            margin-top: 20px;
+            color: var(--text-secondary);
+            font-size: 0.9em;
+        }
+
+        .auth-switch-link a {
+            color: var(--accent-blue);
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .auth-switch-link a:hover {
+            text-decoration: underline;
+        }
+
+        .blur-background {
+            filter: blur(4px);
+            opacity: 0.6;
+            pointer-events: none;
+            user-select: none;
+            transition: all 0.3s ease;
+        }
+        
+        /* Ensure calendar is visible behind overlay */
+        .main-container.blur-background .calendar-container {
+            opacity: 0.6;
+        }
+
+        .settings-menu-item {
+            padding: 12px 16px;
+            cursor: pointer;
+            color: var(--text-primary);
+            transition: all 0.2s ease;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .settings-menu-item:last-child {
+            border-bottom: none;
+        }
+
+        .settings-menu-item:hover {
+            background: var(--hover-bg);
+        }
+
+        .settings-menu-item span {
+            font-size: 0.9em;
+            font-weight: 500;
+        }
+
+        .quantify-logo {
+            width: 180px;
+            height: 180px;
+            position: relative;
+            display: inline-block;
+        }
+
+        .quantify-logo img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            display: block;
+        }
+
+        .stats-bar {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .stat-card {
+            background: var(--bg-card);
+            padding: 8px 16px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            min-width: 120px;
+            box-shadow: var(--shadow-sm);
+            transition: all 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+            border-color: var(--border-light);
+        }
+
+        .stat-label {
+            font-size: 0.7em;
+            color: var(--text-tertiary);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 4px;
+            font-weight: 600;
+        }
+
+        .stat-value {
+            font-size: 1.2em;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+
+        .stat-value.positive {
+            color: var(--accent-green);
+        }
+
+        .stat-value.negative {
+            color: var(--accent-red);
+        }
+
+        .stat-value.neutral {
+            color: var(--text-primary);
+        }
+
+        .main-container {
+            display: grid;
+            grid-template-columns: 200px 1fr;
+            height: calc(100vh - 120px);
+            overflow: hidden;
+        }
+
+        .sidebar {
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border-color);
+            padding: 24px;
+            padding-top: 48px;
+            overflow-y: auto;
+            box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .sidebar::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .sidebar::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 3px;
+        }
+
+        .sidebar::-webkit-scrollbar-thumb:hover {
+            background: var(--border-light);
+        }
+
+        .sidebar-section {
+            margin-bottom: 28px;
+        }
+
+        .sidebar-section:last-child {
+            margin-bottom: 0;
+        }
+
+        .sidebar-logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 24px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .sidebar-logo-text {
+            font-size: 1.8em;
+            font-weight: 700;
+            color: var(--text-primary);
+            letter-spacing: -0.5px;
+        }
+
+        .sidebar-add-trade {
+            margin-bottom: 24px;
+        }
+
+        .sidebar-nav {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            margin-bottom: 24px;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+            font-size: 0.95em;
+            font-weight: 500;
+        }
+
+        .nav-item:hover {
+            background: var(--hover-bg);
+            color: var(--text-primary);
+        }
+
+        .nav-item.active {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            border-left: 3px solid var(--accent-blue);
+        }
+
+        .nav-icon {
+            font-size: 1.1em;
+            width: 20px;
+            text-align: center;
+        }
+
+        .sidebar-section-title {
+            font-size: 0.75em;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-tertiary);
+            font-weight: 700;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .btn {
+            background: linear-gradient(135deg, var(--accent-blue) 0%, var(--accent-blue-hover) 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 14px 22px;
+            font-size: 0.9em;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            margin-bottom: 12px;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 8px rgba(83, 82, 237, 0.3);
+            letter-spacing: 0.3px;
+        }
+
+        .btn:hover {
+            background: linear-gradient(135deg, var(--accent-blue-hover) 0%, #7b6cef 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(83, 82, 237, 0.4);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn-secondary {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            box-shadow: none;
+        }
+
+        .btn-secondary:hover {
+            background: var(--hover-bg);
+            border-color: var(--border-light);
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .calendar-container {
+            padding: 32px 40px;
+            padding-top: 48px;
+            padding-bottom: 150px;
+            overflow-y: auto;
+            overflow-x: hidden;
+            background: var(--bg-primary);
+            scroll-behavior: smooth;
+            overscroll-behavior-y: none;
+            -webkit-overflow-scrolling: touch;
+            will-change: scroll-position;
+            scroll-padding-bottom: 100px;
+        }
+
+        .calendar-container::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .calendar-container::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 4px;
+        }
+
+        .calendar-container::-webkit-scrollbar-thumb:hover {
+            background: var(--border-light);
+        }
+
+        .calendar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 32px;
+        }
+
+        .month-nav {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .nav-btn {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            width: 44px;
+            height: 44px;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            font-size: 1.2em;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .nav-btn:hover {
+            background: var(--hover-bg);
+            border-color: var(--border-light);
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .current-month {
+            font-size: 1.6em;
+            font-weight: 700;
+            color: var(--text-primary);
+            letter-spacing: -0.5px;
+            min-width: 200px;
+            text-align: center;
+        }
+
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr) 150px;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .calendar-grid > div:empty {
+            min-height: 85px;
+        }
+
+        .day-header {
+            text-align: center;
+            padding: 10px;
+            font-size: 0.85em;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+        }
+
+        .calendar-day {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 10px;
+            min-height: 90px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .calendar-day:hover {
+            background: var(--hover-bg);
+            border-color: var(--accent-blue);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .calendar-day.other-month {
+            opacity: 0.3;
+        }
+
+        .calendar-day.today {
+            border-color: var(--accent-blue);
+            background: var(--bg-tertiary);
+        }
+
+        .day-number {
+            font-weight: 600;
+            margin-bottom: 4px;
+            color: var(--text-primary);
+            font-size: 0.95em;
+        }
+
+        .day-pnl {
+            font-size: 0.8em;
+            font-weight: 600;
+            margin-top: 3px;
+        }
+
+        .day-pnl.positive {
+            color: var(--accent-green);
+        }
+
+        .day-pnl.negative {
+            color: var(--accent-red);
+        }
+
+        .day-trade-count {
+            position: absolute;
+            top: 6px;
+            right: 6px;
+            background: var(--accent-blue);
+            color: white;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7em;
+            font-weight: 700;
+        }
+
+        .week-summary {
+            background: linear-gradient(135deg, var(--bg-card) 0%, var(--bg-tertiary) 100%);
+            border: 2px solid var(--accent-blue);
+            border-radius: 10px;
+            padding: 12px;
+            text-align: center;
+            font-weight: 700;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 90px;
+            box-shadow: 0 4px 12px rgba(83, 82, 237, 0.2);
+        }
+
+        .week-summary-label {
+            font-size: 0.7em;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            margin-bottom: 4px;
+        }
+
+        .week-summary-value {
+            font-size: 1.1em;
+        }
+
+        .week-summary-value.positive {
+            color: var(--accent-green);
+        }
+
+        .week-summary-value.negative {
+            color: var(--accent-red);
+        }
+
+        .tag {
+            display: inline-block;
+            background: var(--accent-blue);
+            color: white;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.75em;
+            font-weight: 600;
+            margin: 2px;
+        }
+
+        .chart-container {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .chart-bar {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .chart-bar-label {
+            min-width: 100px;
+            font-size: 0.9em;
+            color: var(--text-secondary);
+        }
+
+        .chart-bar-fill {
+            height: 24px;
+            background: var(--accent-blue);
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding-right: 8px;
+            color: white;
+            font-size: 0.85em;
+            font-weight: 600;
+            min-width: 40px;
+        }
+
+        .chart-bar-fill.positive {
+            background: var(--accent-green);
+        }
+
+        .chart-bar-fill.negative {
+            background: var(--accent-red);
+        }
+
+        .chart-wrapper {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            padding: 24px;
+            margin-bottom: 0;
+            box-shadow: var(--shadow-md);
+        }
+
+        /* Greeting Section */
+        .greeting-section {
+            margin-bottom: 24px;
+            padding: 4px 0;
+        }
+
+        .greeting-text {
+            font-size: 1.5em;
+            font-weight: 600;
+            color: var(--text-primary);
+            letter-spacing: -0.5px;
+        }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        @media (max-width: 1400px) {
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .stat-card-large {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: var(--shadow-md);
+            transition: all 0.3s ease;
+        }
+
+        .stat-card-large:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+            border-color: var(--border-light);
+        }
+
+        .stat-card-header {
+            margin-bottom: 12px;
+        }
+
+        .stat-card-title {
+            font-size: 0.85em;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 600;
+        }
+
+        .stat-card-value {
+            font-size: 2em;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            margin-bottom: 8px;
+        }
+
+        .stat-card-subtitle {
+            font-size: 0.9em;
+            color: var(--text-secondary);
+        }
+
+        /* Charts Section */
+        .charts-section {
+            display: grid;
+            grid-template-rows: auto 1fr;
+            gap: 24px;
+            margin-bottom: 30px;
+        }
+
+        .donut-charts-container {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 24px;
+        }
+
+        .chart-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: var(--shadow-md);
+        }
+        
+        .chart-card.chart-card-wide {
+            padding: 20px;
+        }
+
+        .chart-card-wide {
+            grid-column: auto;
+        }
+
+        .chart-card-header {
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .chart-card-header h3 {
+            font-size: 1em;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        /* Donut Charts */
+        .donut-chart-container {
+            display: flex;
+            align-items: center;
+            gap: 40px;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .donut-chart {
+            width: 220px;
+            height: 220px;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .donut-chart svg {
+            width: 100%;
+            height: 100%;
+            transform: rotate(-90deg);
+            filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.2));
+        }
+
+        .donut-segment {
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .donut-segment:hover {
+            opacity: 0.8;
+            filter: brightness(1.2);
+        }
+
+        .donut-segment.active {
+            opacity: 1;
+            filter: brightness(1.3);
+        }
+
+        .donut-chart-center {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            z-index: 10;
+            pointer-events: none;
+        }
+
+        .donut-chart-value {
+            font-size: 2.2em;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+            transition: all 0.3s ease;
+        }
+
+        .donut-chart-label {
+            font-size: 0.75em;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            font-weight: 600;
+        }
+
+        .donut-chart-legend {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .donut-legend-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 0.95em;
+            color: var(--text-secondary);
+            padding: 8px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background: transparent;
+        }
+
+        .donut-legend-item:hover {
+            background: var(--bg-tertiary);
+            transform: translateX(4px);
+        }
+
+        .donut-legend-item.active {
+            background: var(--bg-tertiary);
+        }
+
+        .donut-legend-color {
+            width: 16px;
+            height: 16px;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            transition: all 0.2s ease;
+        }
+
+        .donut-legend-item:hover .donut-legend-color {
+            transform: scale(1.2);
+        }
+
+        .donut-legend-color.positive {
+            background: linear-gradient(135deg, #00d4aa, #00b894);
+        }
+
+        .donut-legend-color.negative {
+            background: linear-gradient(135deg, #ff6b6b, #ee5a6f);
+        }
+
+        .donut-tooltip {
+            position: absolute;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 8px 12px;
+            font-size: 0.85em;
+            color: var(--text-primary);
+            pointer-events: none;
+            opacity: 0;
+            transform: translateY(-10px);
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            z-index: 100;
+        }
+
+        .donut-tooltip.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* Chart Tabs */
+        .chart-tabs {
+            display: flex;
+            gap: 0;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 16px;
+        }
+
+        .chart-tab {
+            padding: 10px 16px;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            color: var(--text-secondary);
+            font-size: 0.85em;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s ease;
+        }
+
+        .chart-tab:hover {
+            color: var(--text-primary);
+            background: var(--hover-bg);
+        }
+
+        .chart-tab.active {
+            color: var(--accent-blue);
+            border-bottom-color: var(--accent-blue);
+            font-weight: 600;
+        }
+
+        .info-icon {
+            font-size: 0.85em;
+            opacity: 0.6;
+        }
+
+        /* Line Chart */
+        .line-chart {
+            height: 400px;
+            position: relative;
+            width: 100%;
+            padding: 0;
+            min-height: 400px;
+        }
+
+        .chart-axis-label {
+            font-size: 0.75em;
+            fill: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .chart-axis-line {
+            stroke: var(--border-color);
+            stroke-width: 1.5;
+        }
+
+        .chart-zero-line {
+            stroke: var(--text-secondary);
+            stroke-width: 2;
+            opacity: 0.6;
+        }
+
+        .chart-value-label {
+            font-size: 0.7em;
+            fill: var(--text-primary);
+            font-weight: 600;
+        }
+
+        .chart-date-label {
+            font-size: 0.7em;
+            fill: var(--text-secondary);
+            text-anchor: middle;
+            font-weight: 500;
+        }
+
+        /* Daily P&L Chart */
+        .daily-pnl-chart {
+            height: 250px;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: space-around;
+            gap: 4px;
+            padding: 20px 10px 40px 10px;
+            border-top: 2px solid var(--border-color);
+            border-bottom: 2px solid var(--border-color);
+        }
+
+        .daily-pnl-bar {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            min-width: 20px;
+            position: relative;
+        }
+
+        .daily-pnl-bar-value {
+            width: 100%;
+            border-radius: 4px 4px 0 0;
+            min-height: 4px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .daily-pnl-bar-value.positive {
+            background: linear-gradient(180deg, var(--accent-green) 0%, #00b894 100%);
+        }
+
+        .daily-pnl-bar-value.negative {
+            background: linear-gradient(0deg, var(--accent-red) 0%, #ee5a6f 100%);
+            border-radius: 0 0 4px 4px;
+        }
+
+        .daily-pnl-bar-label {
+            font-size: 0.7em;
+            color: var(--text-secondary);
+            text-align: center;
+            margin-top: 4px;
+        }
+
+        .chart-summary {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 16px;
+            padding-top: 16px;
+            border-top: 1px solid var(--border-color);
+            font-size: 0.9em;
+            color: var(--text-secondary);
+        }
+
+        @media (max-width: 1200px) {
+            .charts-section {
+                grid-template-rows: auto 1fr;
+            }
+            .donut-charts-container {
+                grid-template-columns: 1fr;
+            }
+            .chart-card-wide {
+                grid-column: 1;
+            }
+        }
+
+        /* Page Views */
+        .page-view {
+            width: 100%;
+        }
+
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .page-header h2 {
+            font-size: 1.8em;
+            font-weight: 700;
+            color: var(--text-primary);
+            letter-spacing: -0.5px;
+        }
+
+        .page-actions {
+            display: flex;
+            gap: 12px;
+        }
+
+        /* Daily Stats Table */
+        .stats-table {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .stats-table-header {
+            display: grid;
+            grid-template-columns: 1.5fr 1fr 1fr 1fr 1fr 1.5fr;
+            gap: 20px;
+            padding: 16px 20px;
+            background: var(--bg-tertiary);
+            border-bottom: 1px solid var(--border-color);
+            font-weight: 600;
+            font-size: 0.85em;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-secondary);
+        }
+
+        .stats-table-row {
+            display: grid;
+            grid-template-columns: 1.5fr 1fr 1fr 1fr 1fr 1.5fr;
+            gap: 20px;
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border-color);
+            transition: background 0.2s ease;
+        }
+
+        .stats-table-row:hover {
+            background: var(--hover-bg);
+        }
+
+        .stats-table-row:last-child {
+            border-bottom: none;
+        }
+
+        .stats-table-cell {
+            display: flex;
+            align-items: center;
+            font-size: 0.95em;
+        }
+
+        .stats-table-cell.positive {
+            color: var(--accent-green);
+            font-weight: 600;
+        }
+
+        .stats-table-cell.negative {
+            color: var(--accent-red);
+            font-weight: 600;
+        }
+
+        /* Trade Log Table */
+        .trades-table-container {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            overflow: hidden;
+            max-height: calc(100vh - 300px);
+            overflow-y: auto;
+        }
+
+        .trades-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .trades-table thead {
+            background: var(--bg-tertiary);
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .trades-table th {
+            padding: 16px 20px;
+            text-align: left;
+            font-size: 0.85em;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-secondary);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .trades-table td {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border-color);
+            font-size: 0.95em;
+            color: var(--text-primary);
+        }
+
+        .trades-table td.positive {
+            color: var(--accent-green);
+            font-weight: 700;
+        }
+
+        .trades-table td.negative {
+            color: var(--accent-red);
+            font-weight: 700;
+        }
+
+        .trades-table tbody tr:hover {
+            background: var(--hover-bg);
+        }
+
+        .trades-table tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        .btn-small {
+            padding: 6px 12px;
+            font-size: 0.85em;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s ease;
+            background: var(--accent-blue);
+            color: white;
+        }
+
+        .btn-small:hover {
+            background: var(--accent-blue-hover);
+            transform: translateY(-1px);
+        }
+
+        .btn-small.btn-danger {
+            background: var(--accent-red);
+        }
+
+        .btn-small.btn-danger:hover {
+            background: #e63946;
+        }
+
+        /* Reports Grid */
+        .reports-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 24px;
+        }
+
+        .report-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: var(--shadow-md);
+        }
+
+        .report-card h3 {
+            font-size: 1.2em;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 20px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .report-content {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .report-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .report-item:last-child {
+            border-bottom: none;
+        }
+
+        .report-item span {
+            color: var(--text-secondary);
+            font-size: 0.95em;
+        }
+
+        .report-item strong {
+            font-size: 1.1em;
+            color: var(--text-primary);
+        }
+
+        .portfolio-section {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 16px 18px;
+            margin-bottom: 0;
+        }
+
+        .portfolio-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 15px;
+        }
+
+        .portfolio-header h3 {
+            font-size: 1.2em;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .portfolio-summary {
+            text-align: right;
+        }
+
+        .portfolio-latest {
+            font-size: 1.4em;
+            font-weight: 700;
+        }
+
+        .portfolio-change {
+            font-size: 0.85em;
+            font-weight: 600;
+            margin-top: 4px;
+        }
+
+        .portfolio-change.positive {
+            color: var(--accent-green);
+        }
+
+        .portfolio-change.negative {
+            color: var(--accent-red);
+        }
+
+        .portfolio-change.neutral {
+            color: var(--text-secondary);
+        }
+
+        .portfolio-content {
+            display: grid;
+            grid-template-columns: minmax(200px, 280px) minmax(200px, 1fr);
+            gap: 18px;
+            align-items: flex-start;
+        }
+
+        @media (max-width: 1200px) {
+            .portfolio-content {
+                grid-template-columns: minmax(260px, 320px) minmax(260px, 1fr);
+            }
+        }
+
+        .portfolio-metrics {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            margin-bottom: 12px;
+        }
+
+        .portfolio-metric {
+            flex: 1;
+            min-width: 160px;
+        }
+
+        .portfolio-metric-label {
+            font-size: 0.75em;
+            text-transform: uppercase;
+            color: var(--text-secondary);
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+
+        .portfolio-metric-value {
+            font-size: 1.3em;
+            font-weight: 700;
+        }
+        
+        .portfolio-metric-value.positive {
+            color: var(--accent-green);
+        }
+        
+        .portfolio-metric-value.negative {
+            color: var(--accent-red);
+        }
+        
+        .portfolio-metric-value.neutral {
+            color: var(--text-secondary);
+        }
+
+        .portfolio-metric-sub {
+            font-size: 0.8em;
+            color: var(--text-secondary);
+            margin-top: 2px;
+        }
+
+        .portfolio-progress-track {
+            width: 100%;
+            height: 8px;
+            background: var(--bg-tertiary);
+            border-radius: 6px;
+            overflow: hidden;
+            margin-bottom: 18px;
+        }
+
+        .portfolio-progress-bar {
+            height: 100%;
+            width: 0%;
+            background: var(--accent-green);
+            transition: width 0.3s ease;
+        }
+
+        .portfolio-progress-bar.negative {
+            background: var(--accent-red);
+        }
+
+        .portfolio-history {
+            margin-top: 20px;
+            border-top: 1px solid var(--border-color);
+            max-height: 220px;
+            overflow-y: auto;
+        }
+
+        .portfolio-history-wrapper {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .portfolio-history-header {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.8em;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding: 6px 0 2px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .portfolio-history-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid var(--border-color);
+            font-size: 0.9em;
+        }
+
+        .portfolio-history-row:last-child {
+            border-bottom: none;
+        }
+
+        .portfolio-history-values {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 4px;
+        }
+
+        .portfolio-amount {
+            font-weight: 600;
+        }
+
+        .portfolio-day-change {
+            font-size: 0.75em;
+            font-weight: 600;
+        }
+
+        .portfolio-day-change.neutral {
+            color: var(--text-secondary);
+        }
+
+        .portfolio-notes {
+            font-size: 0.8em;
+            color: var(--text-secondary);
+            margin-top: 4px;
+        }
+
+        .portfolio-history::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .portfolio-history::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 3px;
+        }
+
+        .portfolio-alert {
+            margin-top: 10px;
+            font-size: 0.9em;
+        }
+
+        .portfolio-alert.success {
+            color: var(--accent-green);
+        }
+
+        .portfolio-alert.error {
+            color: var(--accent-red);
+        }
+
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+            padding-bottom: 18px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .chart-header h3 {
+            color: var(--text-primary);
+            font-size: 1.3em;
+            font-weight: 700;
+            letter-spacing: -0.3px;
+        }
+
+        .chart-legend {
+            display: flex;
+            gap: 20px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.85em;
+            color: var(--text-secondary);
+        }
+
+        .legend-color {
+            width: 12px;
+            height: 12px;
+            border-radius: 2px;
+        }
+
+        .legend-color.positive {
+            background: var(--accent-green);
+        }
+
+        .legend-color.negative {
+            background: var(--accent-red);
+        }
+
+        .legend-color.win-rate {
+            background: var(--accent-blue);
+        }
+
+        /* Win Rate Chart Styles */
+        .win-rate-chart {
+            height: 240px;
+            position: relative;
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-around;
+            gap: 10px;
+            padding: 24px 12px 36px 12px;
+            border-top: 2px solid var(--border-color);
+            border-bottom: 2px solid var(--border-color);
+            background: linear-gradient(to bottom, rgba(83, 82, 237, 0.05) 0%, transparent 100%);
+        }
+
+        .win-rate-bar {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            min-width: 50px;
+            max-width: 80px;
+            position: relative;
+        }
+
+        .win-rate-bar-value {
+            width: 100%;
+            border-radius: 6px 6px 0 0;
+            background: linear-gradient(180deg, var(--accent-blue) 0%, #6c5ce7 100%);
+            transition: all 0.3s ease;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(83, 82, 237, 0.3);
+            border-top: 2px solid rgba(255, 255, 255, 0.2);
+            min-height: 4px;
+        }
+
+        .win-rate-bar-value:hover {
+            opacity: 0.9;
+            box-shadow: 0 4px 12px rgba(83, 82, 237, 0.4);
+            filter: brightness(1.1);
+            transform: translateY(-2px) scaleY(1.05);
+        }
+
+        .win-rate-bar-label {
+            font-size: 0.75em;
+            color: var(--text-secondary);
+            text-align: center;
+            font-weight: 600;
+            margin-top: 6px;
+            letter-spacing: 0.3px;
+        }
+
+        .win-rate-bar-amount {
+            font-size: 0.75em;
+            color: var(--text-primary);
+            font-weight: 700;
+            text-align: center;
+            margin-bottom: 4px;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+        }
+
+        .performance-chart {
+            height: 240px;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: space-around;
+            gap: 10px;
+            padding: 24px 12px 36px 12px;
+            border-top: 2px solid var(--border-color);
+            border-bottom: 2px solid var(--border-color);
+            background: linear-gradient(to bottom, rgba(83, 82, 237, 0.03) 0%, transparent 50%, rgba(255, 71, 87, 0.03) 100%);
+        }
+        
+        .chart-zero-line {
+            position: absolute;
+            left: 0;
+            right: 0;
+            top: 50%;
+            height: 2px;
+            background: var(--border-color);
+            z-index: 1;
+            transform: translateY(-1px);
+        }
+
+        .chart-bar-month {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            min-width: 50px;
+            max-width: 80px;
+            position: relative;
+            z-index: 2;
+        }
+
+        .chart-bar-container {
+            width: 80%;
+            height: 100%;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .chart-bar-value {
+            width: 100%;
+            min-height: 4px;
+            border-radius: 6px;
+            position: absolute;
+            left: 0;
+            right: 0;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+        }
+        
+        .chart-bar-value.positive {
+            border-radius: 6px 6px 0 0;
+            bottom: 50%;
+            background: linear-gradient(180deg, var(--accent-green) 0%, #00b894 100%);
+            border-top: 2px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .chart-bar-value.negative {
+            border-radius: 0 0 6px 6px;
+            top: 50%;
+            background: linear-gradient(0deg, var(--accent-red) 0%, #ee5a6f 100%);
+            border-bottom: 2px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .chart-bar-value:hover {
+            opacity: 0.9;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+            filter: brightness(1.1);
+        }
+        
+        .chart-bar-value.positive:hover {
+            transform: translateY(-3px) scaleY(1.05);
+        }
+        
+        .chart-bar-value.negative:hover {
+            transform: translateY(3px) scaleY(1.05);
+        }
+
+        .chart-bar-label {
+            font-size: 0.75em;
+            color: var(--text-secondary);
+            text-align: center;
+            font-weight: 600;
+            margin-top: 6px;
+            letter-spacing: 0.3px;
+        }
+
+        .chart-bar-amount {
+            font-size: 0.75em;
+            color: var(--text-primary);
+            font-weight: 700;
+            text-align: center;
+            position: absolute;
+            width: 100%;
+            z-index: 3;
+            pointer-events: none;
+            white-space: nowrap;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+        }
+        
+        .chart-bar-amount.positive {
+            bottom: 50%;
+            transform: translateY(-100%);
+            margin-bottom: 6px;
+        }
+        
+        .chart-bar-amount.negative {
+            top: 50%;
+            transform: translateY(100%);
+            margin-top: 6px;
+        }
+
+        .chart-zero-line {
+            position: absolute;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: var(--border-color);
+            opacity: 0.5;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(6px);
+            animation: fadeIn 0.2s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .modal-content {
+            background: var(--bg-card);
+            margin: 5% auto;
+            padding: 32px;
+            border-radius: 16px;
+            width: 90%;
+            max-width: 600px;
+            border: 1px solid var(--border-color);
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: var(--shadow-lg);
+            animation: slideUp 0.3s ease;
+        }
+
+        @keyframes slideUp {
+            from {
+                transform: translateY(20px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes drawArc {
+            to {
+                stroke-dashoffset: 0;
+            }
+        }
+
+        .modal-content::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .modal-content::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 4px;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 28px;
+            padding-bottom: 18px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .modal-header h2 {
+            color: var(--text-primary);
+            font-size: 1.6em;
+            font-weight: 700;
+            letter-spacing: -0.3px;
+        }
+
+        .close {
+            color: var(--text-secondary);
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+
+        .close:hover {
+            background: var(--hover-bg);
+            color: var(--text-primary);
+            border-color: var(--border-light);
+            transform: rotate(90deg);
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: var(--text-secondary);
+            font-size: 0.9em;
+            font-weight: 600;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            color: var(--text-primary);
+            font-size: 1em;
+            transition: border-color 0.2s;
+            font-family: inherit;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: var(--accent-blue);
+            box-shadow: 0 0 0 3px rgba(83, 82, 237, 0.1);
+            background: var(--bg-tertiary);
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .trades-list {
+            margin-top: 20px;
+        }
+
+        .trade-item {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 18px;
+            margin-bottom: 12px;
+            position: relative;
+            box-shadow: var(--shadow-sm);
+            transition: all 0.3s ease;
+        }
+
+        .trade-item:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+            border-color: var(--border-light);
+        }
+
+        .trade-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .btn-edit, .btn-delete {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9em;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .btn-edit {
+            background: var(--accent-blue);
+            color: white;
+        }
+
+        .btn-edit:hover {
+            background: #4342cd;
+        }
+
+        .btn-delete {
+            background: var(--accent-red);
+            color: white;
+        }
+
+        .btn-delete:hover {
+            background: #e63946;
+        }
+
+        .trade-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .trade-symbol {
+            font-weight: 700;
+            font-size: 1.1em;
+            color: var(--text-primary);
+        }
+
+        .trade-action {
+            padding: 4px 12px;
+            border-radius: 4px;
+            font-size: 0.85em;
+            font-weight: 600;
+        }
+
+        .trade-action.buy {
+            background: rgba(0, 212, 170, 0.2);
+            color: var(--accent-green);
+        }
+
+        .trade-action.sell {
+            background: rgba(255, 71, 87, 0.2);
+            color: var(--accent-red);
+        }
+
+        .trade-details {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            font-size: 0.9em;
+            color: var(--text-secondary);
+        }
+
+        .trade-detail-item {
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .trade-detail-label {
+            color: var(--text-secondary);
+        }
+
+        .trade-detail-value {
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+
+        .alert {
+            padding: 12px 16px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            font-size: 0.9em;
+        }
+
+        .alert-success {
+            background: rgba(0, 212, 170, 0.1);
+            border: 1px solid var(--accent-green);
+            color: var(--accent-green);
+        }
+
+        .alert-error {
+            background: rgba(255, 71, 87, 0.1);
+            border: 1px solid var(--accent-red);
+            color: var(--accent-red);
+        }
+
+        .empty-day {
+            color: var(--text-secondary);
+            font-size: 0.85em;
+            text-align: center;
+            padding-top: 30px;
+        }
+
+        @media (max-width: 1024px) {
+            .main-container {
+                grid-template-columns: 1fr;
+            }
+
+            .sidebar {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-left">
+            <div class="sidebar-logo">
+                <div class="quantify-logo">
+                    <img src="/static/logo.png" alt="Echo Logo" style="width: 100%; height: 100%; object-fit: contain;" />
+                </div>
+            </div>
+        </div>
+        <div class="header-right">
+            <div class="stats-bar">
+                <div class="stat-card">
+                    <div class="stat-label">Win Rate</div>
+                    <div class="stat-value neutral" id="winRate">0%</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Today</div>
+                    <div class="stat-value neutral" id="dayPnl">$0.00</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">This Month</div>
+                    <div class="stat-value neutral" id="monthPnl">$0.00</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">All Time</div>
+                    <div class="stat-value neutral" id="allTimePnl">$0.00</div>
+                </div>
+            </div>
+            <div class="settings-menu-container">
+                <button class="settings-button" onclick="toggleSettingsMenu()">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="3"></circle>
+                        <path d="M12 1v6m0 6v6M5.64 5.64l4.24 4.24m4.24 4.24l4.24 4.24M1 12h6m6 0h6M5.64 18.36l4.24-4.24m4.24-4.24l4.24-4.24"></path>
+                    </svg>
+                </button>
+                <div id="settingsDropdown" class="settings-dropdown">
+                    <!-- Shown when NOT signed in -->
+                    <div id="authButtons" class="settings-menu-item-group" style="display: none;">
+                        <div class="settings-menu-item" onclick="openSignInModal()" style="background: var(--accent-blue); color: white; font-weight: 600;">
+                            <span>Sign In</span>
+                        </div>
+                        <div class="settings-menu-item" onclick="openCreateAccountModal()" style="background: var(--bg-tertiary); font-weight: 600;">
+                            <span>Create Account</span>
+                        </div>
+                    </div>
+                    <!-- Shown when signed in -->
+                    <div id="userMenu" class="settings-menu-item-group" style="display: none;">
+                        <div class="settings-menu-item" onclick="openProfileModal()">
+                            <span>View Profile</span>
+                        </div>
+                        <div class="settings-menu-item" onclick="openCurrencySettings()">
+                            <span>Currency View</span>
+                        </div>
+                        <div class="settings-menu-item" onclick="openSettingsModal()">
+                            <span>Settings</span>
+                        </div>
+                        <div class="settings-menu-item" onclick="handleSignOut()" style="color: var(--accent-red); border-top: 1px solid var(--border-color); margin-top: 8px; padding-top: 12px;">
+                            <span>Sign Out</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Authentication Overlay -->
+    <div id="authOverlay" class="auth-overlay">
+        <div class="auth-container">
+            <h1>Echo</h1>
+            <div class="subtitle">Options Trading Journal</div>
+            
+            <div class="auth-tabs">
+                <button class="auth-tab active" onclick="switchAuthTab('signin')">Sign In</button>
+                <button class="auth-tab" onclick="switchAuthTab('signup')">Create Account</button>
+            </div>
+
+            <!-- Sign In Form -->
+            <form id="authSignInForm" class="auth-form active" onsubmit="handleAuthSignIn(event)">
+                <div class="form-group">
+                    <label for="authSignInEmail">Email</label>
+                    <input type="email" id="authSignInEmail" placeholder="Enter your email" required autocomplete="email">
+                </div>
+                <div class="form-group">
+                    <label for="authSignInPassword">Password</label>
+                    <input type="password" id="authSignInPassword" placeholder="Enter your password" required autocomplete="current-password">
+                </div>
+                <div id="authSignInError" class="auth-error"></div>
+                <button type="submit" class="auth-submit-btn">Sign In</button>
+                <div class="auth-switch-link">
+                    Don't have an account? <a href="#" onclick="switchAuthTab('signup'); return false;">Create one</a>
+                </div>
+            </form>
+
+            <!-- Create Account Form -->
+            <form id="authSignUpForm" class="auth-form" onsubmit="handleAuthSignUp(event)">
+                <div class="form-group">
+                    <label for="authSignUpName">Name</label>
+                    <input type="text" id="authSignUpName" placeholder="Enter your name" required autocomplete="name">
+                </div>
+                <div class="form-group">
+                    <label for="authSignUpEmail">Email</label>
+                    <input type="email" id="authSignUpEmail" placeholder="Enter your email" required autocomplete="email">
+                </div>
+                <div class="form-group">
+                    <label for="authSignUpPassword">Password</label>
+                    <input type="password" id="authSignUpPassword" placeholder="Enter your password (min 6 characters)" required minlength="6" autocomplete="new-password">
+                </div>
+                <div class="form-group">
+                    <label for="authSignUpPasswordConfirm">Confirm Password</label>
+                    <input type="password" id="authSignUpPasswordConfirm" placeholder="Confirm your password" required minlength="6" autocomplete="new-password">
+                </div>
+                <div id="authSignUpError" class="auth-error"></div>
+                <button type="submit" class="auth-submit-btn">Create Account</button>
+                <div class="auth-switch-link">
+                    Already have an account? <a href="#" onclick="switchAuthTab('signin'); return false;">Sign in</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="main-container" id="mainContainer">
+        <div class="sidebar">
+                    <button class="btn sidebar-add-trade" onclick="openAddTradeModal()">+ Add Trade</button>
+            
+            <nav class="sidebar-nav">
+                <a href="#" class="nav-item active" data-page="dashboard">
+                    <span class="nav-icon"></span>
+                    <span>Dashboard</span>
+                </a>
+                <a href="#" class="nav-item" data-page="daily-stats">
+                    <span class="nav-icon"></span>
+                    <span>Daily Stats</span>
+                </a>
+                <a href="#" class="nav-item" data-page="trade-log">
+                    <span class="nav-icon"></span>
+                    <span>Trade Log</span>
+                </a>
+                <a href="#" class="nav-item" data-page="reports">
+                    <span class="nav-icon"></span>
+                    <span>Reports</span>
+                </a>
+            </nav>
+            
+            <div class="sidebar-section">
+                <h3 class="sidebar-section-title">Tools</h3>
+                <button class="btn btn-secondary" onclick="openFilterModal()">Filter Trades</button>
+            </div>
+            
+                    <div class="sidebar-section">
+                        <h3 class="sidebar-section-title">CSV</h3>
+                        <button class="btn btn-secondary" onclick="document.getElementById('csvFileInput').click()">Import CSV</button>
+                        <input type="file" id="csvFileInput" accept=".csv" style="display: none;" onchange="importCSV(event)">
+                        <button class="btn btn-secondary" onclick="exportTrades()">Export CSV</button>
+                    </div>
+                    
+                    <div class="sidebar-section">
+                    </div>
+        </div>
+
+        <div class="calendar-container">
+            <!-- Dashboard View -->
+            <div id="dashboard-view" class="page-view">
+                <!-- Greeting Section -->
+                <div class="greeting-section">
+                    <div class="greeting-text" id="greetingText">Good morning!</div>
+                </div>
+                <!-- Summary Statistics Cards -->
+                <div class="stats-grid">
+                <div class="stat-card-large">
+                    <div class="stat-card-header">
+                        <div class="stat-card-title">Total Net P&L</div>
+                    </div>
+                    <div class="stat-card-value" id="totalNetPnl">$0.00</div>
+                    <div class="stat-card-subtitle" id="totalTradesCount">Trades in total: 0</div>
+                </div>
+                
+                <div class="stat-card-large">
+                    <div class="stat-card-header">
+                        <div class="stat-card-title">Profit Factor</div>
+                    </div>
+                    <div class="stat-card-value neutral" id="profitFactor">0.00</div>
+                </div>
+                
+                <div class="stat-card-large">
+                    <div class="stat-card-header">
+                        <div class="stat-card-title">Average Winning Trade</div>
+                    </div>
+                    <div class="stat-card-value positive" id="avgWin">$0.00</div>
+                </div>
+                
+                <div class="stat-card-large">
+                    <div class="stat-card-header">
+                        <div class="stat-card-title">Average Losing Trade</div>
+                    </div>
+                    <div class="stat-card-value negative" id="avgLoss">$0.00</div>
+                </div>
+            </div>
+
+            <!-- Charts Section -->
+            <div class="charts-section">
+                <div class="donut-charts-container">
+                    <div class="chart-card">
+                        <div class="chart-card-header">
+                            <h3>Winning % By Trades</h3>
+                        </div>
+                        <div class="donut-chart-container">
+                            <div id="winRateByTradesChart" class="donut-chart">
+                                <div class="donut-chart-center">
+                                    <div class="donut-chart-value" id="winRateByTradesValue">0%</div>
+                                    <div class="donut-chart-label">WINRATE</div>
+                                </div>
+                            </div>
+                            <div class="donut-chart-legend">
+                                <div class="donut-legend-item">
+                                    <span class="donut-legend-color positive"></span>
+                                    <span id="winnersCount">0 winners</span>
+                                </div>
+                                <div class="donut-legend-item">
+                                    <span class="donut-legend-color negative"></span>
+                                    <span id="losersCount">0 losers</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="chart-card">
+                        <div class="chart-card-header">
+                            <h3>Winning % By Days</h3>
+                        </div>
+                        <div class="donut-chart-container">
+                            <div id="winRateByDaysChart" class="donut-chart">
+                                <div class="donut-chart-center">
+                                    <div class="donut-chart-value" id="winRateByDaysValue">0%</div>
+                                    <div class="donut-chart-label">WINRATE</div>
+                                </div>
+                            </div>
+                            <div class="donut-chart-legend">
+                                <div class="donut-legend-item">
+                                    <span class="donut-legend-color positive"></span>
+                                    <span id="winningDaysCount">0 winners</span>
+                                </div>
+                                <div class="donut-legend-item">
+                                    <span class="donut-legend-color negative"></span>
+                                    <span id="losingDaysCount">0 losers</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="chart-card chart-card-wide">
+                    <div class="chart-card-header">
+                        <h3>Daily Net Cumulative P&L</h3>
+                    </div>
+                    <div id="cumulativePnlChart" class="line-chart">
+                        <div class="loading">
+                            <div class="spinner"></div>
+                            Loading chart...
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="calendar-header">
+                <div class="month-nav">
+                    <button class="nav-btn" onclick="changeMonth(-1)">‹</button>
+                    <div class="current-month" id="currentMonth"></div>
+                    <button class="nav-btn" onclick="changeMonth(1)">›</button>
+                </div>
+            </div>
+            
+            <div id="calendarGrid"></div>
+            </div>
+
+            <!-- Daily Stats View -->
+            <div id="daily-stats-view" class="page-view" style="display: none;">
+                <div class="page-header">
+                    <h2>Daily Performance Statistics</h2>
+                </div>
+                <div id="dailyStatsContent" class="daily-stats-content">
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        Loading daily stats...
+                    </div>
+                </div>
+            </div>
+
+            <!-- Trade Log View -->
+            <div id="trade-log-view" class="page-view" style="display: none;">
+                <div class="page-header">
+                    <h2>Trade Log</h2>
+                    <div class="page-actions">
+                        <button class="btn" onclick="openAddTradeModal()">Add Trade</button>
+                    </div>
+                </div>
+                <div id="tradeLogContent" class="trade-log-content">
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        Loading trades...
+                    </div>
+                </div>
+            </div>
+
+            <!-- Reports View -->
+            <div id="reports-view" class="page-view" style="display: none;">
+                <div class="page-header">
+                    <h2>Reports & Analytics</h2>
+                </div>
+                <div id="reportsContent" class="reports-content">
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        Loading reports...
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    <!-- Add Trade Modal -->
+    <div id="addTradeModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="tradeModalTitle">Add Sold Options Trade</h2>
+                <button class="close" onclick="closeAddTradeModal()">&times;</button>
+            </div>
+            <div id="modalAlert"></div>
+            <form id="addTradeForm" onsubmit="submitTrade(event)">
+                <input type="hidden" id="trade_id" value="">
+                <div class="form-group">
+                    <label for="trade_type">Trade Type *</label>
+                    <select id="trade_type" required onchange="toggleOptionFields()">
+                        <option value="OPTION">Option</option>
+                        <option value="STOCK">Stock</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="symbol">Symbol *</label>
+                    <input type="text" id="symbol" required placeholder="e.g., AAPL" style="text-transform: uppercase;">
+                </div>
+                <div id="optionFields">
+                    <div class="form-group">
+                        <label for="option_type">Option Type *</label>
+                        <select id="option_type" required>
+                            <option value="CALL">Call</option>
+                            <option value="PUT">Put</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="quantity">Contracts/Quantity *</label>
+                        <input type="number" id="quantity" required step="0.01" min="0.01" placeholder="e.g., 1" oninput="updateSoldAmountPreview()">
+                    </div>
+                    <div class="form-group">
+                        <label for="price">Buy Price per Contract *</label>
+                        <input type="number" id="price" required step="0.01" min="0.01" placeholder="e.g., 2.50">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="sold_amount">Sold Price per Contract *</label>
+                    <input type="number" id="sold_amount" step="0.01" min="0" placeholder="e.g., 3.00" required oninput="updateSoldAmountPreview()">
+                    <div id="soldAmountPreview" style="margin-top: 5px; font-size: 0.85em; color: var(--text-secondary);"></div>
+                </div>
+                <div class="form-group">
+                    <label for="transaction_fee">Transaction Fee</label>
+                    <input type="number" id="transaction_fee" step="0.01" min="0" placeholder="e.g., 2.00" value="0">
+                </div>
+                <div class="form-group">
+                    <label for="date">Sale Date & Time</label>
+                    <input type="datetime-local" id="date">
+                </div>
+                <div style="display: flex; gap: 10px; margin-top: 25px;">
+                    <button type="submit" class="btn" id="submitTradeBtn" style="flex: 1;">Add Trade</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeAddTradeModal()" style="flex: 1;">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Sign In Modal -->
+    <div id="signInModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Sign In</h2>
+                <button class="close" onclick="closeSignInModal()">&times;</button>
+            </div>
+            <form id="signInForm" onsubmit="handleSignIn(event)">
+                <div class="form-group">
+                    <label for="signInEmail">Email</label>
+                    <input type="email" id="signInEmail" placeholder="Enter your email" required>
+                </div>
+                <div class="form-group">
+                    <label for="signInPassword">Password</label>
+                    <input type="password" id="signInPassword" placeholder="Enter your password" required>
+                </div>
+                <div id="signInError" class="error-message" style="display: none; color: var(--accent-red); margin-bottom: 12px; font-size: 0.9em;"></div>
+                <div class="form-group" style="display: flex; gap: 12px; margin-top: 20px;">
+                    <button type="submit" class="btn" style="flex: 1;">Sign In</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeSignInModal()" style="flex: 1;">Cancel</button>
+                </div>
+                <div style="text-align: center; margin-top: 16px; font-size: 0.9em; color: var(--text-secondary);">
+                    Don't have an account? <a href="#" onclick="closeSignInModal(); openCreateAccountModal();" style="color: var(--accent-blue); text-decoration: none;">Create one</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Create Account Modal -->
+    <div id="createAccountModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Create Account</h2>
+                <button class="close" onclick="closeCreateAccountModal()">&times;</button>
+            </div>
+            <form id="createAccountForm" onsubmit="handleCreateAccount(event)">
+                <div class="form-group">
+                    <label for="createAccountName">Name</label>
+                    <input type="text" id="createAccountName" placeholder="Enter your name" required>
+                </div>
+                <div class="form-group">
+                    <label for="createAccountEmail">Email</label>
+                    <input type="email" id="createAccountEmail" placeholder="Enter your email" required>
+                </div>
+                <div class="form-group">
+                    <label for="createAccountPassword">Password</label>
+                    <input type="password" id="createAccountPassword" placeholder="Enter your password (min 6 characters)" required minlength="6">
+                </div>
+                <div class="form-group">
+                    <label for="createAccountPasswordConfirm">Confirm Password</label>
+                    <input type="password" id="createAccountPasswordConfirm" placeholder="Confirm your password" required minlength="6">
+                </div>
+                <div id="createAccountError" class="error-message" style="display: none; color: var(--accent-red); margin-bottom: 12px; font-size: 0.9em;"></div>
+                <div class="form-group" style="display: flex; gap: 12px; margin-top: 20px;">
+                    <button type="submit" class="btn" style="flex: 1;">Create Account</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeCreateAccountModal()" style="flex: 1;">Cancel</button>
+                </div>
+                <div style="text-align: center; margin-top: 16px; font-size: 0.9em; color: var(--text-secondary);">
+                    Already have an account? <a href="#" onclick="closeCreateAccountModal(); openSignInModal();" style="color: var(--accent-blue); text-decoration: none;">Sign in</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Profile Modal -->
+    <div id="profileModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Profile</h2>
+                <button class="close" onclick="closeProfileModal()">&times;</button>
+            </div>
+            <div id="profileContent">
+                <div class="form-group">
+                    <label>Name</label>
+                    <div style="padding: 10px; background: var(--bg-tertiary); border-radius: 6px; color: var(--text-primary);" id="profileName">Loading...</div>
+                </div>
+                <div class="form-group">
+                    <label>Email</label>
+                    <div style="padding: 10px; background: var(--bg-tertiary); border-radius: 6px; color: var(--text-primary);" id="profileEmail">Loading...</div>
+                </div>
+                <div class="form-group" style="margin-top: 20px;">
+                    <button type="button" class="btn btn-secondary" onclick="closeProfileModal()" style="width: 100%;">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Currency Settings Modal -->
+    <div id="currencySettingsModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Currency View</h2>
+                <button class="close" onclick="closeCurrencySettingsModal()">&times;</button>
+            </div>
+            <div class="form-group">
+                <label for="currencySelectModal">Select Currency</label>
+                <select id="currencySelectModal" onchange="changeCurrencyFromModal()" style="width: 100%; padding: 10px; background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border-color); border-radius: 6px; font-size: 1em;">
+                    <option value="USD">USD - US Dollar ($)</option>
+                    <option value="CAD">CAD - Canadian Dollar (C$)</option>
+                    <option value="EUR">EUR - Euro (€)</option>
+                    <option value="GBP">GBP - British Pound (£)</option>
+                    <option value="JPY">JPY - Japanese Yen (¥)</option>
+                    <option value="AUD">AUD - Australian Dollar (A$)</option>
+                    <option value="CHF">CHF - Swiss Franc</option>
+                    <option value="CNY">CNY - Chinese Yuan (¥)</option>
+                    <option value="INR">INR - Indian Rupee (₹)</option>
+                    <option value="MXN">MXN - Mexican Peso ($)</option>
+                </select>
+                <div style="margin-top: 12px; padding: 10px; background: var(--bg-tertiary); border-radius: 6px; font-size: 0.85em; color: var(--text-secondary);">
+                    <div>Exchange rates update hourly</div>
+                    <div style="margin-top: 4px; font-size: 0.9em;" id="exchangeRateInfo">1 USD = <span id="currentRate">-</span></div>
+                </div>
+            </div>
+            <div class="form-group" style="margin-top: 20px;">
+                <button type="button" class="btn btn-secondary" onclick="closeCurrencySettingsModal()" style="width: 100%;">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settingsModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Settings</h2>
+                <button class="close" onclick="closeSettingsModal()">&times;</button>
+            </div>
+            <div class="form-group">
+                <label>Theme</label>
+                <select id="themeSelect" onchange="changeTheme()" style="width: 100%; padding: 10px; background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border-color); border-radius: 6px; font-size: 1em;">
+                    <option value="dark">Dark</option>
+                    <option value="light" disabled>Light (Coming Soon)</option>
+                </select>
+            </div>
+            <div class="form-group" style="margin-top: 20px;">
+                <button type="button" class="btn btn-secondary" onclick="closeSettingsModal()" style="width: 100%;">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Day Trades Modal -->
+    <div id="dayTradesModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="dayTradesTitle">Trades</h2>
+                <button class="close" onclick="closeDayTradesModal()">&times;</button>
+            </div>
+            <div id="dayTradesContent"></div>
+        </div>
+    </div>
+
+
+
+    <!-- Portfolio Calendar Modal -->
+    <div id="portfolioCalendarModal" class="modal">
+        <div class="modal-content" style="max-width: 900px;">
+            <div class="modal-header">
+                <h2>Portfolio Balance Calendar</h2>
+                <button class="close" onclick="closePortfolioCalendar()">&times;</button>
+            </div>
+            <div style="padding: 20px;">
+                <div class="calendar-header">
+                    <div class="month-nav">
+                        <button class="nav-btn" onclick="changePortfolioMonth(-1)">‹</button>
+                        <div class="current-month" id="portfolioCurrentMonth"></div>
+                        <button class="nav-btn" onclick="changePortfolioMonth(1)">›</button>
+                    </div>
+                </div>
+                <div id="portfolioCalendarGrid"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = '/api';
+        let currentDate = new Date();
+        let selectedDate = null;
+        // Load currency preference from localStorage or default to USD
+        let currentCurrency = localStorage.getItem('currency') || 'USD';
+        
+        // Exchange rates object - will be populated from API
+        let exchangeRates = {
+            USD: 1.0,
+            CAD: 1.35,
+            EUR: 0.92,
+            GBP: 0.79,
+            JPY: 149.50,
+            AUD: 1.52,
+            CHF: 0.88,
+            CNY: 7.24,
+            INR: 83.12,
+            MXN: 17.05
+        };
+        
+        // Currency metadata
+        const currencyInfo = {
+            USD: { name: 'US Dollar', symbol: '$' },
+            CAD: { name: 'Canadian Dollar', symbol: 'C$' },
+            EUR: { name: 'Euro', symbol: '€' },
+            GBP: { name: 'British Pound', symbol: '£' },
+            JPY: { name: 'Japanese Yen', symbol: '¥' },
+            AUD: { name: 'Australian Dollar', symbol: 'A$' },
+            CHF: { name: 'Swiss Franc', symbol: 'CHF' },
+            CNY: { name: 'Chinese Yuan', symbol: '¥' },
+            INR: { name: 'Indian Rupee', symbol: '₹' },
+            MXN: { name: 'Mexican Peso', symbol: '$' }
+        };
+        
+        // Set the currency select to match saved preference (will be set after DOM loads)
+
+        const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+        const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+        // Helper function to format dates/times in PST
+        function formatDatePST(date, options = {}) {
+            if (!date) return '';
+            const dateObj = date instanceof Date ? date : new Date(date);
+            return new Intl.DateTimeFormat('en-US', {
+                timeZone: 'America/Los_Angeles',
+                ...options
+            }).format(dateObj);
+        }
+
+        function formatTimePST(date) {
+            if (!date) return '';
+            const dateObj = date instanceof Date ? date : new Date(date);
+            return new Intl.DateTimeFormat('en-US', {
+                timeZone: 'America/Los_Angeles',
+                hour: 'numeric',
+                minute: '2-digit',
+                hour12: true
+            }).format(dateObj);
+        }
+
+        // Get current datetime in PST for datetime-local input
+        function getCurrentPSTDateTime() {
+            return dateToPSTDateTimeLocal(new Date());
+        }
+
+        // Convert a date to PST datetime-local format
+        function dateToPSTDateTimeLocal(date) {
+            if (!date) return '';
+            const dateObj = date instanceof Date ? date : new Date(date);
+            // Get PST time components using Intl formatter
+            const formatter = new Intl.DateTimeFormat('en-US', {
+                timeZone: 'America/Los_Angeles',
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: false
+            });
+            const parts = formatter.formatToParts(dateObj);
+            const year = parts.find(p => p.type === 'year').value;
+            const month = parts.find(p => p.type === 'month').value;
+            const day = parts.find(p => p.type === 'day').value;
+            const hour = parts.find(p => p.type === 'hour').value;
+            const minute = parts.find(p => p.type === 'minute').value;
+            return `${year}-${month}-${day}T${hour}:${minute}`;
+        }
+
+        function formatCurrency(value) {
+            // Convert value from USD to selected currency
+            const rate = exchangeRates[currentCurrency] || 1.0;
+            const displayValue = value * rate;
+            
+            // Special formatting for JPY (no decimals)
+            const decimals = currentCurrency === 'JPY' ? 0 : 2;
+            
+            return new Intl.NumberFormat('en-US', {
+                style: 'currency',
+                currency: currentCurrency,
+                minimumFractionDigits: decimals,
+                maximumFractionDigits: decimals
+            }).format(displayValue);
+        }
+        
+        // Fetch real-time exchange rates
+        async function fetchExchangeRates() {
+            try {
+                // Check if we have recent rates cached (less than 1 hour old)
+                const cachedRates = localStorage.getItem('exchangeRates');
+                const cacheTimestamp = localStorage.getItem('exchangeRatesTimestamp');
+                const now = Date.now();
+                
+                if (cachedRates && cacheTimestamp && (now - parseInt(cacheTimestamp)) < 3600000) {
+                    // Use cached rates if less than 1 hour old
+                    exchangeRates = JSON.parse(cachedRates);
+                    return;
+                }
+                
+                // Fetch from free API (exchangerate.host - no API key required)
+                const response = await fetch('https://api.exchangerate.host/latest?base=USD');
+                const data = await response.json();
+                
+                if (data.success && data.rates) {
+                    // Update exchange rates
+                    exchangeRates = {
+                        USD: 1.0,
+                        CAD: data.rates.CAD || exchangeRates.CAD,
+                        EUR: data.rates.EUR || exchangeRates.EUR,
+                        GBP: data.rates.GBP || exchangeRates.GBP,
+                        JPY: data.rates.JPY || exchangeRates.JPY,
+                        AUD: data.rates.AUD || exchangeRates.AUD,
+                        CHF: data.rates.CHF || exchangeRates.CHF,
+                        CNY: data.rates.CNY || exchangeRates.CNY,
+                        INR: data.rates.INR || exchangeRates.INR,
+                        MXN: data.rates.MXN || exchangeRates.MXN
+                    };
+                    
+                    // Cache the rates
+                    localStorage.setItem('exchangeRates', JSON.stringify(exchangeRates));
+                    localStorage.setItem('exchangeRatesTimestamp', now.toString());
+                }
+            } catch (error) {
+                console.error('Error fetching exchange rates:', error);
+                // Use cached rates or defaults if API fails
+                const cachedRates = localStorage.getItem('exchangeRates');
+                if (cachedRates) {
+                    exchangeRates = JSON.parse(cachedRates);
+                }
+            }
+        }
+
+        function formatCurrencyWithSign(value) {
+            if (value > 0) {
+                return `+${formatCurrency(value)}`;
+            }
+            return formatCurrency(value);
+        }
+
+        function changeCurrency() {
+            const select = document.getElementById('currencySelect');
+            currentCurrency = select.value;
+            // Save preference to localStorage
+            localStorage.setItem('currency', currentCurrency);
+            // Reload all data to update currency display
+            loadAllData();
+        }
+
+        function getPnlClass(value) {
+            if (value > 0) return 'positive';
+            if (value < 0) return 'negative';
+            return 'neutral';
+        }
+
+        function updateSoldAmountPreview() {
+            const quantity = parseFloat(document.getElementById('quantity').value) || 0;
+            const soldPricePerContract = parseFloat(document.getElementById('sold_amount').value) || 0;
+            const previewEl = document.getElementById('soldAmountPreview');
+            
+            if (quantity > 0 && soldPricePerContract > 0) {
+                const totalSoldAmount = quantity * soldPricePerContract * 100;
+                previewEl.textContent = `Total sold amount: ${formatCurrency(totalSoldAmount)} (${quantity} contract${quantity !== 1 ? 's' : ''} × ${formatCurrency(soldPricePerContract)} × 100)`;
+            } else {
+                previewEl.textContent = '';
+            }
+        }
+
+        function toggleOptionFields() {
+            const tradeType = document.getElementById('trade_type').value;
+            const optionFields = document.getElementById('optionFields');
+            const optionType = document.getElementById('option_type');
+            const soldAmount = document.getElementById('sold_amount');
+            
+            if (tradeType === 'OPTION') {
+                optionFields.style.display = 'block';
+                optionType.required = true;
+                soldAmount.required = true;
+            } else {
+                optionFields.style.display = 'none';
+                optionType.required = false;
+                soldAmount.required = false;
+            }
+        }
+
+        function changeMonth(direction) {
+            currentDate.setMonth(currentDate.getMonth() + direction);
+            loadCalendar();
+        }
+
+        function loadCalendar() {
+            const year = currentDate.getFullYear();
+            const month = currentDate.getMonth() + 1;
+            
+            document.getElementById('currentMonth').textContent = 
+                `${monthNames[currentDate.getMonth()]} ${year}`;
+
+            fetch(`${API_BASE}/calendar?year=${year}&month=${month}`, {
+                headers: getAuthHeaders()
+            })
+                .then(res => res.json())
+                .then(data => {
+                    renderCalendar(year, month, data);
+                })
+                .catch(err => {
+                    console.error('Error loading calendar:', err);
+                    renderCalendar(year, month, {});
+                });
+        }
+
+        function renderCalendar(year, month, tradesData) {
+            const firstDay = new Date(year, month - 1, 1);
+            const lastDay = new Date(year, month, 0);
+            const daysInMonth = lastDay.getDate();
+            const startingDayOfWeek = firstDay.getDay();
+            
+            const today = new Date();
+            const isCurrentMonth = today.getFullYear() === year && today.getMonth() === month - 1;
+
+            let html = '<div class="calendar-grid">';
+            
+            // Day headers
+            dayNames.forEach(day => {
+                html += `<div class="day-header">${day}</div>`;
+            });
+            // Add header for weekly P&L column
+            html += '<div class="day-header">Week P&L</div>';
+
+            // Calculate weekly P&L for each week
+            let currentWeekPnl = 0;
+            let weekStartIndex = 0;
+
+            // Empty cells for days before month starts
+            for (let i = 0; i < startingDayOfWeek; i++) {
+                html += '<div class="calendar-day other-month"></div>';
+            }
+
+            // Days of the month
+            for (let day = 1; day <= daysInMonth; day++) {
+                const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                const dayData = tradesData[dateStr] || { trades: [], pnl: 0, count: 0 };
+                const isToday = isCurrentMonth && day === today.getDate();
+                const dayOfWeek = (startingDayOfWeek + day - 1) % 7;
+                
+                // Add to weekly P&L
+                currentWeekPnl += dayData.pnl || 0;
+                
+                // Regular day cell
+                html += `<div class="calendar-day ${isToday ? 'today' : ''}" onclick="showDayTrades('${dateStr}', ${dayData.count})">`;
+                if (dayData.count > 0) {
+                    html += `<div class="day-trade-count">${dayData.count}</div>`;
+                }
+                html += `<div class="day-number">${day}</div>`;
+                if (dayData.pnl !== 0) {
+                    html += `<div class="day-pnl ${getPnlClass(dayData.pnl)}">${formatCurrency(dayData.pnl)}</div>`;
+                }
+                html += '</div>';
+                
+                // If it's Saturday (end of week), add weekly summary in separate column
+                if (dayOfWeek === 6) {
+                    html += '<div class="week-summary">';
+                    html += `<div class="week-summary-label">Week P&L</div>`;
+                    html += `<div class="week-summary-value ${getPnlClass(currentWeekPnl)}">${formatCurrency(currentWeekPnl)}</div>`;
+                    html += '</div>';
+                    // Reset for next week
+                    currentWeekPnl = 0;
+                }
+            }
+
+            // Handle remaining days if month doesn't end on Saturday
+            const lastDayOfWeek = (startingDayOfWeek + daysInMonth - 1) % 7;
+            if (lastDayOfWeek !== 6) {
+                // Fill remaining days in the week
+                for (let i = lastDayOfWeek + 1; i < 7; i++) {
+                    html += '<div class="calendar-day other-month"></div>';
+                }
+                // Always add final weekly summary at the end of the last row
+                html += '<div class="week-summary">';
+                html += `<div class="week-summary-label">Week P&L</div>`;
+                html += `<div class="week-summary-value ${getPnlClass(currentWeekPnl)}">${formatCurrency(currentWeekPnl)}</div>`;
+                html += '</div>';
+            } else {
+                // If month ends on Saturday, add an empty week summary box at the end
+                html += '<div class="week-summary">';
+                html += `<div class="week-summary-label">Week P&L</div>`;
+                html += `<div class="week-summary-value neutral">${formatCurrency(0)}</div>`;
+                html += '</div>';
+            }
+
+            html += '</div>';
+            document.getElementById('calendarGrid').innerHTML = html;
+        }
+
+        function showDayTrades(dateStr, count) {
+            if (count === 0) return;
+            
+            fetch(`${API_BASE}/calendar?year=${currentDate.getFullYear()}&month=${currentDate.getMonth() + 1}`, {
+                headers: getAuthHeaders()
+            })
+                .then(res => res.json())
+                .then(data => {
+                    const dayData = data[dateStr];
+                    if (!dayData || dayData.trades.length === 0) return;
+
+                    const date = new Date(dateStr);
+                    document.getElementById('dayTradesTitle').textContent = 
+                        `Trades - ${formatDatePST(date, { month: 'long', day: 'numeric', year: 'numeric' })}`;
+                    
+                    let html = `<div class="stat-card" style="margin-bottom: 20px;">
+                        <div class="stat-label">Daily P&L</div>
+                        <div class="stat-value ${getPnlClass(dayData.pnl)}">${formatCurrency(dayData.pnl)}</div>
+                    </div>`;
+
+                    dayData.trades.forEach(trade => {
+                        let optionStr = '';
+                        if (trade.trade_type === 'OPTION') {
+                            const strikePrice = trade.strike || 0;
+                            const rate = exchangeRates[currentCurrency] || 1.0;
+                            const displayStrike = strikePrice * rate;
+                            optionStr = ` ${trade.option_type} ${formatCurrency(displayStrike)}`;
+                        }
+                        
+                        html += `
+                            <div class="trade-item">
+                                <div class="trade-header">
+                                    <div class="trade-symbol">${trade.symbol}${optionStr}</div>
+                                    <div class="trade-action ${trade.action.toLowerCase()}">${trade.action}</div>
+                                </div>
+                                <div class="trade-details">
+                                    <div class="trade-detail-item">
+                                        <span class="trade-detail-label">Quantity:</span>
+                                        <span class="trade-detail-value">${trade.quantity}</span>
+                                    </div>
+                                    <div class="trade-detail-item">
+                                        <span class="trade-detail-label">Buy Price:</span>
+                                        <span class="trade-detail-value">${formatCurrency(trade.price)}</span>
+                                    </div>
+                                    <div class="trade-detail-item">
+                                        <span class="trade-detail-label">Sold Amount:</span>
+                                        <span class="trade-detail-value">${formatCurrency(trade.sold_amount || 0)}</span>
+                                    </div>
+                                    <div class="trade-detail-item">
+                                        <span class="trade-detail-label">Transaction Fee:</span>
+                                        <span class="trade-detail-value">${formatCurrency(2.00)}</span>
+                                    </div>
+                                    <div class="trade-detail-item">
+                                        <span class="trade-detail-label">P&L (after fee):</span>
+                                        <span class="trade-detail-value ${getPnlClass((trade.sold_amount || 0) - (trade.quantity * trade.price * 100) - 2.00)}">${formatCurrency((trade.sold_amount || 0) - (trade.quantity * trade.price * 100) - 2.00)}</span>
+                                    </div>
+                                    <div class="trade-detail-item">
+                                        <span class="trade-detail-label">Time:</span>
+                                        <span class="trade-detail-value">${formatTimePST(trade.date)}</span>
+                                    </div>
+                                </div>
+                                ${trade.strategy ? `<div style="margin-top: 10px; color: var(--text-secondary); font-size: 0.9em;"><strong>Strategy:</strong> ${trade.strategy}</div>` : ''}
+                                ${trade.tags && trade.tags.length > 0 ? `<div style="margin-top: 8px; display: flex; flex-wrap: wrap; gap: 5px;">
+                                    ${trade.tags.map(tag => `<span style="background: var(--accent-blue); color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.75em;">${tag}</span>`).join('')}
+                                </div>` : ''}
+                                <div class="trade-actions">
+                                    <button class="btn-edit" onclick="editTrade('${trade.id}')">Edit</button>
+                                    <button class="btn-delete" onclick="deleteTrade('${trade.id}')">Delete</button>
+                                </div>
+                            </div>
+                        `;
+                    });
+
+                    document.getElementById('dayTradesContent').innerHTML = html;
+                    document.getElementById('dayTradesModal').style.display = 'block';
+                });
+        }
+
+        function closeDayTradesModal() {
+            document.getElementById('dayTradesModal').style.display = 'none';
+        }
+
+        let editingTradeId = null;
+
+        function openAddTradeModal() {
+            editingTradeId = null;
+            document.getElementById('tradeModalTitle').textContent = 'Add Sold Options Trade';
+            document.getElementById('submitTradeBtn').textContent = 'Add Trade';
+            document.getElementById('trade_id').value = '';
+            document.getElementById('addTradeModal').style.display = 'block';
+            document.getElementById('date').value = getCurrentPSTDateTime();
+            document.getElementById('addTradeForm').reset();
+            toggleOptionFields();
+        }
+
+        function closeAddTradeModal() {
+            document.getElementById('addTradeModal').style.display = 'none';
+            document.getElementById('addTradeForm').reset();
+            document.getElementById('modalAlert').innerHTML = '';
+            editingTradeId = null;
+            document.getElementById('trade_id').value = '';
+        }
+
+        async function editTrade(tradeId) {
+            try {
+                // Get all trades to find the one we want to edit
+                const response = await fetch(`${API_BASE}/trades?limit=1000`, {
+                    headers: getAuthHeaders()
+                });
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    showAlert('Error loading trade', 'error');
+                    return;
+                }
+
+                const trade = data.trades.find(t => t.id === tradeId);
+                if (!trade) {
+                    showAlert('Trade not found', 'error');
+                    return;
+                }
+
+                // Populate form with trade data
+                editingTradeId = tradeId;
+                document.getElementById('trade_id').value = tradeId;
+                document.getElementById('tradeModalTitle').textContent = 'Edit Trade';
+                document.getElementById('submitTradeBtn').textContent = 'Update Trade';
+                
+                document.getElementById('trade_type').value = trade.trade_type || 'OPTION';
+                toggleOptionFields();
+                
+                document.getElementById('symbol').value = trade.symbol || '';
+                document.getElementById('option_type').value = trade.option_type || 'CALL';
+                document.getElementById('quantity').value = trade.quantity || '';
+                document.getElementById('price').value = trade.price || '';
+                // Convert total sold amount back to price per contract for display
+                const quantity = parseFloat(trade.quantity) || 1;
+                const totalSoldAmount = parseFloat(trade.sold_amount) || 0;
+                const soldPricePerContract = quantity > 0 ? (totalSoldAmount / (quantity * 100)) : 0;
+                document.getElementById('sold_amount').value = soldPricePerContract.toFixed(2);
+                document.getElementById('transaction_fee').value = trade.transaction_fee || 0;
+                
+                // Update preview
+                updateSoldAmountPreview();
+                
+                // Format date for datetime-local input (convert to PST)
+                if (trade.date) {
+                    document.getElementById('date').value = dateToPSTDateTimeLocal(trade.date);
+                }
+                
+                document.getElementById('addTradeModal').style.display = 'block';
+            } catch (error) {
+                console.error('Error loading trade:', error);
+                showAlert('Error loading trade: ' + error.message, 'error');
+            }
+        }
+
+        async function deleteTrade(tradeId) {
+            if (!confirm('Are you sure you want to delete this trade? This cannot be undone.')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/trades/${tradeId}`, {
+                    method: 'DELETE',
+                    headers: getAuthHeaders()
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showAlert('Trade deleted successfully!', 'success');
+                    // Reload data and close modal
+                    setTimeout(() => {
+                        closeDayTradesModal();
+                        loadAllData();
+                    }, 1000);
+                } else {
+                    showAlert(data.error || 'Error deleting trade', 'error');
+                }
+            } catch (error) {
+                console.error('Error deleting trade:', error);
+                showAlert('Error deleting trade: ' + error.message, 'error');
+            }
+        }
+
+        function showAlert(message, type = 'success') {
+            const alertDiv = document.getElementById('modalAlert');
+            alertDiv.innerHTML = `<div class="alert alert-${type}">${message}</div>`;
+            setTimeout(() => {
+                alertDiv.innerHTML = '';
+            }, 5000);
+        }
+
+        async function submitTrade(event) {
+            event.preventDefault();
+            
+            // Calculate total sold amount from sold price per contract
+            const quantity = parseFloat(document.getElementById('quantity').value);
+            const soldPricePerContract = parseFloat(document.getElementById('sold_amount').value) || 0;
+            const totalSoldAmount = quantity * soldPricePerContract * 100; // Options are per 100 shares
+            
+            const tradeData = {
+                symbol: document.getElementById('symbol').value.toUpperCase(),
+                trade_type: document.getElementById('trade_type').value,
+                option_type: document.getElementById('option_type').value,
+                strike: 0, // No longer collecting strike price
+                sold_amount: totalSoldAmount, // Store total sold amount (calculated from price per contract)
+                action: 'SELL', // Always SELL since you're entering after selling
+                quantity: quantity,
+                price: parseFloat(document.getElementById('price').value),
+                transaction_fee: parseFloat(document.getElementById('transaction_fee').value) || 0,
+                date: document.getElementById('date').value || new Date().toISOString()
+            };
+
+            const tradeId = document.getElementById('trade_id').value;
+            const isEditing = tradeId && editingTradeId;
+
+            try {
+                const url = isEditing ? `${API_BASE}/trades/${tradeId}` : `${API_BASE}/trades`;
+                const method = isEditing ? 'PUT' : 'POST';
+                
+                const response = await fetch(url, {
+                    method: method,
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify(tradeData)
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showAlert(isEditing ? 'Trade updated successfully!' : 'Trade added successfully!', 'success');
+                    // Close modals immediately and reload data
+                    closeAddTradeModal();
+                    closeDayTradesModal();
+                    loadAllData();
+                } else {
+                    showAlert(data.error || (isEditing ? 'Error updating trade' : 'Error adding trade'), 'error');
+                }
+            } catch (error) {
+                console.error('Error submitting trade:', error);
+                showAlert(`Error connecting to server: ${error.message}`, 'error');
+            }
+        }
+
+        async function importCSV(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const response = await fetch(`${API_BASE}/import`, {
+                    method: 'POST',
+                    headers: {
+                        'X-Session-Token': sessionToken || ''
+                    },
+                    body: formData
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    alert(`Successfully imported ${data.imported} trades!`);
+                    loadAllData();
+                } else {
+                    alert(data.error || 'Error importing CSV');
+                }
+            } catch (error) {
+                alert('Error connecting to server');
+            }
+
+            event.target.value = '';
+        }
+
+        async function loadPnL() {
+            try {
+                const response = await fetch(`${API_BASE}/pnl`, {
+                    headers: getAuthHeaders()
+                });
+                const data = await response.json();
+                
+                // Update header stats
+                const winRate = data.win_rate || 0;
+                document.getElementById('winRate').textContent = `${winRate}%`;
+                if (winRate >= 50) {
+                    document.getElementById('winRate').className = 'stat-value positive';
+                } else if (winRate >= 40) {
+                    document.getElementById('winRate').className = 'stat-value neutral';
+                } else {
+                    document.getElementById('winRate').className = 'stat-value negative';
+                }
+                
+                document.getElementById('dayPnl').textContent = formatCurrency(data.day_pnl || 0);
+                document.getElementById('dayPnl').className = `stat-value ${getPnlClass(data.day_pnl || 0)}`;
+                
+                document.getElementById('monthPnl').textContent = formatCurrency(data.month_pnl || 0);
+                document.getElementById('monthPnl').className = `stat-value ${getPnlClass(data.month_pnl || 0)}`;
+                
+                document.getElementById('allTimePnl').textContent = formatCurrency(data.all_time_pnl || 0);
+                document.getElementById('allTimePnl').className = `stat-value ${getPnlClass(data.all_time_pnl || 0)}`;
+                
+                // Update dashboard stats
+                document.getElementById('totalNetPnl').textContent = formatCurrency(data.all_time_pnl || 0);
+                document.getElementById('totalNetPnl').className = `stat-card-value ${getPnlClass(data.all_time_pnl || 0)}`;
+                document.getElementById('totalTradesCount').textContent = `Trades in total: ${data.total_trades || 0}`;
+                
+                document.getElementById('profitFactor').textContent = (data.profit_factor || 0).toFixed(2);
+                document.getElementById('avgWin').textContent = formatCurrency(data.avg_win || 0);
+                document.getElementById('avgLoss').textContent = formatCurrency(data.avg_loss || 0);
+                
+                // Update donut charts
+                loadDonutCharts(data);
+                
+                // Load other charts
+                loadCumulativePnlChart();
+            } catch (error) {
+                console.error('Error loading PnL:', error);
+            }
+        }
+
+        function loadDonutCharts(data) {
+            const winRate = data.win_rate || 0;
+            const winners = data.winning_trades || 0;
+            const losers = data.losing_trades || 0;
+            
+            // Win Rate By Trades
+            renderDonutChart('winRateByTradesChart', winRate, winners, losers, 'Trades');
+            document.getElementById('winRateByTradesValue').textContent = `${winRate.toFixed(1)}%`;
+            document.getElementById('winnersCount').textContent = `${winners} winners`;
+            document.getElementById('losersCount').textContent = `${losers} losers`;
+            
+            // Calculate win rate by days (need to fetch daily data)
+            calculateWinRateByDays();
+        }
+
+        function renderDonutChart(containerId, winRate, winners, losers, type) {
+            const container = document.getElementById(containerId);
+            const size = 220;
+            const center = size / 2;
+            const radius = 85;
+            const strokeWidth = 20;
+            const innerRadius = radius - strokeWidth / 2;
+            
+            // Calculate angles
+            const winAngle = (winRate / 100) * 360;
+            const lossAngle = 360 - winAngle;
+            
+            function polarToCartesian(centerX, centerY, radius, angleInDegrees) {
+                const angleInRadians = (angleInDegrees - 90) * Math.PI / 180.0;
+                return {
+                    x: centerX + (radius * Math.cos(angleInRadians)),
+                    y: centerY + (radius * Math.sin(angleInRadians))
+                };
+            }
+            
+            function createArc(x, y, radius, startAngle, endAngle) {
+                const start = polarToCartesian(x, y, radius, endAngle);
+                const end = polarToCartesian(x, y, radius, startAngle);
+                const largeArcFlag = endAngle - startAngle <= 180 ? "0" : "1";
+                return [
+                    "M", start.x, start.y,
+                    "A", radius, radius, 0, largeArcFlag, 0, end.x, end.y
+                ].join(" ");
+            }
+            
+            // Create SVG
+            let svg = container.querySelector('svg');
+            if (!svg) {
+                svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+                svg.setAttribute('width', size);
+                svg.setAttribute('height', size);
+                svg.setAttribute('viewBox', `0 0 ${size} ${size}`);
+                container.insertBefore(svg, container.firstChild);
+            } else {
+                svg.innerHTML = '';
+            }
+            
+            // Add gradients
+            const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+            
+            const winGradient = document.createElementNS('http://www.w3.org/2000/svg', 'linearGradient');
+            winGradient.setAttribute('id', `winGradient-${containerId}`);
+            winGradient.setAttribute('x1', '0%');
+            winGradient.setAttribute('y1', '0%');
+            winGradient.setAttribute('x2', '100%');
+            winGradient.setAttribute('y2', '100%');
+            const winStop1 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
+            winStop1.setAttribute('offset', '0%');
+            winStop1.setAttribute('stop-color', '#00d4aa');
+            const winStop2 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
+            winStop2.setAttribute('offset', '100%');
+            winStop2.setAttribute('stop-color', '#00b894');
+            winGradient.appendChild(winStop1);
+            winGradient.appendChild(winStop2);
+            
+            const lossGradient = document.createElementNS('http://www.w3.org/2000/svg', 'linearGradient');
+            lossGradient.setAttribute('id', `lossGradient-${containerId}`);
+            lossGradient.setAttribute('x1', '0%');
+            lossGradient.setAttribute('y1', '0%');
+            lossGradient.setAttribute('x2', '100%');
+            lossGradient.setAttribute('y2', '100%');
+            const lossStop1 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
+            lossStop1.setAttribute('offset', '0%');
+            lossStop1.setAttribute('stop-color', '#ff6b6b');
+            const lossStop2 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
+            lossStop2.setAttribute('offset', '100%');
+            lossStop2.setAttribute('stop-color', '#ee5a6f');
+            lossGradient.appendChild(lossStop1);
+            lossGradient.appendChild(lossStop2);
+            
+            defs.appendChild(winGradient);
+            defs.appendChild(lossGradient);
+            svg.appendChild(defs);
+            
+            // Background circle
+            const bgCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            bgCircle.setAttribute('cx', center);
+            bgCircle.setAttribute('cy', center);
+            bgCircle.setAttribute('r', radius);
+            bgCircle.setAttribute('fill', 'none');
+            bgCircle.setAttribute('stroke', 'var(--bg-tertiary)');
+            bgCircle.setAttribute('stroke-width', strokeWidth);
+            svg.appendChild(bgCircle);
+            
+            // Win segment
+            if (winAngle > 0) {
+                const winPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                winPath.setAttribute('d', createArc(center, center, innerRadius, 0, winAngle));
+                winPath.setAttribute('fill', 'none');
+                winPath.setAttribute('stroke', `url(#winGradient-${containerId})`);
+                winPath.setAttribute('stroke-width', strokeWidth);
+                winPath.setAttribute('stroke-linecap', 'round');
+                winPath.setAttribute('class', 'donut-segment');
+                winPath.setAttribute('data-type', 'win');
+                winPath.setAttribute('data-value', winRate);
+                winPath.setAttribute('data-count', winners);
+                const circumference = 2 * Math.PI * innerRadius;
+                const winDashArray = (winAngle / 360) * circumference;
+                winPath.style.strokeDasharray = `${winDashArray} ${circumference}`;
+                winPath.style.strokeDashoffset = winDashArray;
+                winPath.style.animation = `drawArc 1.5s ease-out forwards`;
+                svg.appendChild(winPath);
+            }
+            
+            // Loss segment
+            if (lossAngle > 0) {
+                const lossPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                lossPath.setAttribute('d', createArc(center, center, innerRadius, winAngle, 360));
+                lossPath.setAttribute('fill', 'none');
+                lossPath.setAttribute('stroke', `url(#lossGradient-${containerId})`);
+                lossPath.setAttribute('stroke-width', strokeWidth);
+                lossPath.setAttribute('stroke-linecap', 'round');
+                lossPath.setAttribute('class', 'donut-segment');
+                lossPath.setAttribute('data-type', 'loss');
+                lossPath.setAttribute('data-value', (100 - winRate));
+                lossPath.setAttribute('data-count', losers);
+                const circumference = 2 * Math.PI * innerRadius;
+                const lossDashArray = (lossAngle / 360) * circumference;
+                lossPath.style.strokeDasharray = `${lossDashArray} ${circumference}`;
+                lossPath.style.strokeDashoffset = lossDashArray;
+                lossPath.style.animation = `drawArc 1.5s ease-out 0.3s forwards`;
+                svg.appendChild(lossPath);
+            }
+            
+            // Add hover interactions
+            const segments = svg.querySelectorAll('.donut-segment');
+            segments.forEach(segment => {
+                segment.addEventListener('mouseenter', function() {
+                    this.classList.add('active');
+                    const type = this.getAttribute('data-type');
+                    
+                    // Highlight corresponding legend
+                    const legendItems = container.closest('.donut-chart-container').querySelectorAll('.donut-legend-item');
+                    legendItems.forEach(item => {
+                        if (item.querySelector('.donut-legend-color').classList.contains(type === 'win' ? 'positive' : 'negative')) {
+                            item.classList.add('active');
+                        }
+                    });
+                });
+                
+                segment.addEventListener('mouseleave', function() {
+                    this.classList.remove('active');
+                    const legendItems = container.closest('.donut-chart-container').querySelectorAll('.donut-legend-item');
+                    legendItems.forEach(item => item.classList.remove('active'));
+                });
+            });
+            
+            // Add legend hover interactions
+            const legendItems = container.closest('.donut-chart-container').querySelectorAll('.donut-legend-item');
+            legendItems.forEach(item => {
+                item.addEventListener('mouseenter', function() {
+                    const isPositive = this.querySelector('.donut-legend-color').classList.contains('positive');
+                    segments.forEach(seg => {
+                        if ((isPositive && seg.getAttribute('data-type') === 'win') ||
+                            (!isPositive && seg.getAttribute('data-type') === 'loss')) {
+                            seg.classList.add('active');
+                        }
+                    });
+                });
+                
+                item.addEventListener('mouseleave', function() {
+                    segments.forEach(seg => seg.classList.remove('active'));
+                });
+            });
+        }
+
+        async function calculateWinRateByDays() {
+            try {
+                const response = await fetch(`${API_BASE}/trades?limit=1000`, {
+                    headers: getAuthHeaders()
+                });
+                const data = await response.json();
+                const trades = data.trades || [];
+                
+                const dailyResults = {};
+                trades.forEach(trade => {
+                    if (trade.action && ['SELL', 'CLOSE'].includes(trade.action.toUpperCase())) {
+                        const date = new Date(trade.date);
+                        const dateKey = date.toISOString().split('T')[0];
+                        if (!dailyResults[dateKey]) {
+                            dailyResults[dateKey] = { wins: 0, losses: 0 };
+                        }
+                        const pnl = parseFloat(trade.sold_amount || 0) - (parseFloat(trade.quantity || 0) * parseFloat(trade.price || 0) * 100) - (parseFloat(trade.transaction_fee || 0));
+                        if (pnl > 0) {
+                            dailyResults[dateKey].wins++;
+                        } else if (pnl < 0) {
+                            dailyResults[dateKey].losses++;
+                        }
+                    }
+                });
+                
+                let winningDays = 0;
+                let losingDays = 0;
+                Object.values(dailyResults).forEach(day => {
+                    if (day.wins > day.losses) winningDays++;
+                    else if (day.losses > day.wins) losingDays++;
+                });
+                
+                const totalDays = winningDays + losingDays;
+                const winRateByDays = totalDays > 0 ? (winningDays / totalDays * 100) : 0;
+                
+                renderDonutChart('winRateByDaysChart', winRateByDays, winningDays, losingDays, 'Days');
+                document.getElementById('winRateByDaysValue').textContent = `${winRateByDays.toFixed(1)}%`;
+                document.getElementById('winningDaysCount').textContent = `${winningDays} winners`;
+                document.getElementById('losingDaysCount').textContent = `${losingDays} losers`;
+            } catch (error) {
+                console.error('Error calculating win rate by days:', error);
+            }
+        }
+
+        async function loadCumulativePnlChart() {
+            try {
+                // Get all trades to calculate cumulative P&L
+                const response = await fetch(`${API_BASE}/trades?limit=1000`, {
+                    headers: getAuthHeaders()
+                });
+                const tradesData = await response.json();
+                const trades = tradesData.trades || [];
+                
+                if (trades.length === 0) {
+                    document.getElementById('cumulativePnlChart').innerHTML = 
+                        '<p style="text-align: center; color: var(--text-secondary); padding: 40px;">Not enough data to display chart</p>';
+                    return;
+                }
+                
+                // Group trades by date and calculate daily P&L
+                const dailyPnl = {};
+                trades.forEach(trade => {
+                    if (trade.action && ['SELL', 'CLOSE'].includes(trade.action.toUpperCase())) {
+                        const date = new Date(trade.date);
+                        const dateKey = date.toISOString().split('T')[0];
+                        if (!dailyPnl[dateKey]) {
+                            dailyPnl[dateKey] = 0;
+                        }
+                        const pnl = parseFloat(trade.sold_amount || 0) - (parseFloat(trade.quantity || 0) * parseFloat(trade.price || 0) * 100) - (parseFloat(trade.transaction_fee || 0));
+                        dailyPnl[dateKey] += pnl;
+                    }
+                });
+                
+                // Sort dates and calculate cumulative P&L
+                const sortedDates = Object.keys(dailyPnl).sort();
+                if (sortedDates.length === 0) {
+                    document.getElementById('cumulativePnlChart').innerHTML = 
+                        '<p style="text-align: center; color: var(--text-secondary); padding: 40px;">Not enough data to display chart</p>';
+                    return;
+                }
+                
+                let cumulativePnl = 0;
+                const cumulativeData = sortedDates.map(date => {
+                    cumulativePnl += dailyPnl[date];
+                    return {
+                        date: date,
+                        cumulative: cumulativePnl
+                    };
+                });
+                
+                const values = cumulativeData.map(d => d.cumulative);
+                const maxValue = Math.max(...values, 0);
+                const minValue = Math.min(...values, 0);
+                const range = maxValue - minValue || 1;
+                
+                // Create SVG chart with axes - use responsive sizing
+                // Use a base width that scales with container, minimum 800px
+                const baseWidth = 1000;
+                const baseHeight = 400;
+                const paddingLeft = 75;
+                const paddingRight = 40;
+                const paddingTop = 40;
+                const paddingBottom = 55;
+                const chartWidth = baseWidth - paddingLeft - paddingRight;
+                const chartHeight = baseHeight - paddingTop - paddingBottom;
+                
+                // Find zero line position
+                const zeroY = baseHeight - paddingBottom - ((0 - minValue) / range * chartHeight);
+                
+                let html = `<svg width="100%" height="100%" viewBox="0 0 ${baseWidth} ${baseHeight}" preserveAspectRatio="none" style="overflow: visible;">`;
+                html += '<defs>';
+                html += '<linearGradient id="areaGradient" x1="0%" y1="0%" x2="0%" y2="100%">';
+                html += '<stop offset="0%" style="stop-color:#6c5ce7;stop-opacity:0.3" />';
+                html += '<stop offset="100%" style="stop-color:#6c5ce7;stop-opacity:0.05" />';
+                html += '</linearGradient>';
+                html += '</defs>';
+                
+                // Draw Y-axis grid lines and labels
+                const yAxisSteps = 4;
+                const yAxisValues = [];
+                for (let i = 0; i <= yAxisSteps; i++) {
+                    const value = minValue + (maxValue - minValue) * (i / yAxisSteps);
+                    yAxisValues.push(value);
+                }
+                
+                // Round to nice numbers
+                const niceValues = yAxisValues.map(v => {
+                    const abs = Math.abs(v);
+                    if (abs < 100) return Math.round(v / 10) * 10;
+                    if (abs < 1000) return Math.round(v / 100) * 100;
+                    return Math.round(v / 1000) * 1000;
+                });
+                
+                for (let i = 0; i <= yAxisSteps; i++) {
+                    const value = niceValues[i];
+                    const y = baseHeight - paddingBottom - ((value - minValue) / range * chartHeight);
+                    
+                    // Grid line (only if not zero line)
+                    if (Math.abs(value) > 0.01) {
+                        html += `<line x1="${paddingLeft}" y1="${y}" x2="${baseWidth - paddingRight}" y2="${y}" stroke="var(--border-color)" stroke-width="0.5" stroke-dasharray="2,4" opacity="0.15" />`;
+                    }
+                    
+                    // Y-axis label with modern styling
+                    const isZero = Math.abs(value) < 0.01;
+                    const fontColor = isZero ? 'var(--text-secondary)' : 'var(--text-primary)';
+                    const fontWeight = isZero ? '500' : '600';
+                    html += `<text x="${paddingLeft - 15}" y="${y + 5}" fill="${fontColor}" font-size="12" font-family="'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" text-anchor="end" font-weight="${fontWeight}" letter-spacing="-0.3px">${formatCurrency(value)}</text>`;
+                }
+                
+                // Draw Y-axis line (subtle)
+                html += `<line x1="${paddingLeft}" y1="${paddingTop}" x2="${paddingLeft}" y2="${baseHeight - paddingBottom}" stroke="var(--border-color)" stroke-width="1" opacity="0.3" />`;
+                
+                // Draw prominent zero line (subtle)
+                if (minValue < 0 && maxValue > 0) {
+                    html += `<line x1="${paddingLeft}" y1="${zeroY}" x2="${baseWidth - paddingRight}" y2="${zeroY}" stroke="var(--border-color)" stroke-width="1" stroke-dasharray="3,3" opacity="0.4" />`;
+                }
+                
+                // Draw area under the line (only for positive values)
+                let areaPath = `M ${paddingLeft} ${baseHeight - paddingBottom}`;
+                let lastPositiveIndex = -1;
+                for (let i = 0; i < values.length; i++) {
+                    const x = paddingLeft + (i / (values.length - 1)) * chartWidth;
+                    const y = baseHeight - paddingBottom - ((values[i] - minValue) / range * chartHeight);
+                    
+                    if (values[i] >= 0) {
+                        if (lastPositiveIndex === -1) {
+                            areaPath += ` L ${x} ${baseHeight - paddingBottom}`;
+                        }
+                        areaPath += ` L ${x} ${y}`;
+                        lastPositiveIndex = i;
+                    } else if (lastPositiveIndex >= 0) {
+                        // Close the area when going negative
+                        areaPath += ` L ${x} ${baseHeight - paddingBottom} Z`;
+                        html += `<path d="${areaPath}" fill="url(#areaGradient)" />`;
+                        areaPath = `M ${x} ${baseHeight - paddingBottom}`;
+                        lastPositiveIndex = -1;
+                    }
+                }
+                if (lastPositiveIndex >= 0) {
+                    areaPath += ` L ${baseWidth - paddingRight} ${baseHeight - paddingBottom} Z`;
+                    html += `<path d="${areaPath}" fill="url(#areaGradient)" />`;
+                }
+                
+                // Draw main line (smooth, stock app style)
+                let linePath = `M ${paddingLeft} ${baseHeight - paddingBottom - ((values[0] - minValue) / range * chartHeight)}`;
+                for (let i = 1; i < values.length; i++) {
+                    const x = paddingLeft + (i / (values.length - 1)) * chartWidth;
+                    const y = baseHeight - paddingBottom - ((values[i] - minValue) / range * chartHeight);
+                    linePath += ` L ${x} ${y}`;
+                }
+                html += `<path d="${linePath}" stroke="#6c5ce7" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" />`;
+                
+                // Find lowest point and mark it with red dot
+                let minIndex = 0;
+                let minVal = values[0];
+                for (let i = 1; i < values.length; i++) {
+                    if (values[i] < minVal) {
+                        minVal = values[i];
+                        minIndex = i;
+                    }
+                }
+                
+                // Draw data points (minimal, only key points)
+                const showPoints = values.length <= 20; // Only show points if not too many
+                for (let i = 0; i < values.length; i++) {
+                    const x = paddingLeft + (i / (values.length - 1)) * chartWidth;
+                    const y = baseHeight - paddingBottom - ((values[i] - minValue) / range * chartHeight);
+                    
+                    // Only show points at start, end, and key points
+                    if (showPoints || i === 0 || i === values.length - 1 || i === minIndex) {
+                        if (i === minIndex && minVal < 0) {
+                            html += `<circle cx="${x}" cy="${y}" r="4" fill="var(--accent-red)" opacity="0.8" />`;
+                        } else if (i === 0 || i === values.length - 1) {
+                            html += `<circle cx="${x}" cy="${y}" r="3" fill="#6c5ce7" opacity="0.9" />`;
+                        }
+                    }
+                }
+                
+                // Draw X-axis labels (dates) - show ~5-6 dates with better formatting
+                const numDateLabels = Math.min(6, sortedDates.length);
+                const dateShowEveryNth = Math.max(1, Math.floor(sortedDates.length / (numDateLabels - 1)));
+                
+                for (let i = 0; i < sortedDates.length; i++) {
+                    if (i % dateShowEveryNth === 0 || i === sortedDates.length - 1) {
+                        const x = paddingLeft + (i / (sortedDates.length - 1)) * chartWidth;
+                        const date = new Date(sortedDates[i]);
+                        
+                        // Format date more elegantly: "Dec 9" or "Dec 9, 2025"
+                        const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                        const month = monthNames[date.getMonth()];
+                        const day = date.getDate();
+                        const year = date.getFullYear();
+                        const currentYear = new Date().getFullYear();
+                        
+                        // Only show year if it's not the current year
+                        const dateStr = year !== currentYear 
+                            ? `${month} ${day}, ${year}` 
+                            : `${month} ${day}`;
+                        
+                        // Add subtle tick mark
+                        html += `<line x1="${x}" y1="${baseHeight - paddingBottom}" x2="${x}" y2="${baseHeight - paddingBottom + 4}" stroke="var(--border-color)" stroke-width="1.5" opacity="0.4" />`;
+                        
+                        // Date label with modern styling
+                        html += `<text x="${x}" y="${baseHeight - paddingBottom + 22}" fill="var(--text-primary)" font-size="11" font-family="'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" text-anchor="middle" font-weight="600" letter-spacing="0.2px">${dateStr}</text>`;
+                    }
+                }
+                
+                // Draw X-axis line (subtle)
+                html += `<line x1="${paddingLeft}" y1="${baseHeight - paddingBottom}" x2="${baseWidth - paddingRight}" y2="${baseHeight - paddingBottom}" stroke="var(--border-color)" stroke-width="1" opacity="0.3" />`;
+                
+                html += '</svg>';
+                const chartContainer = document.getElementById('cumulativePnlChart');
+                chartContainer.innerHTML = html;
+                
+                // Add interactive hover functionality
+                setupChartInteractivity(chartContainer, cumulativeData, values, minValue, range, chartWidth, chartHeight, paddingLeft, paddingRight, paddingTop, paddingBottom, baseWidth, baseHeight);
+            } catch (error) {
+                console.error('Error loading cumulative P&L chart:', error);
+                document.getElementById('cumulativePnlChart').innerHTML = 
+                    '<p style="text-align: center; color: var(--accent-red); padding: 20px;">Error loading chart</p>';
+            }
+        }
+
+        function setupChartInteractivity(container, cumulativeData, values, minValue, range, chartWidth, chartHeight, paddingLeft, paddingRight, paddingTop, paddingBottom, baseWidth, baseHeight) {
+            const svg = container.querySelector('svg');
+            if (!svg) return;
+            
+            // Create tooltip
+            const tooltip = document.createElement('div');
+            tooltip.id = 'chartTooltip';
+            tooltip.style.cssText = `
+                position: absolute;
+                background: var(--bg-card);
+                border: 1px solid var(--border-color);
+                border-radius: 10px;
+                padding: 12px 16px;
+                font-size: 0.9em;
+                font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+                pointer-events: none;
+                opacity: 0;
+                transition: opacity 0.2s;
+                box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+                z-index: 1000;
+                color: var(--text-primary);
+                min-width: 120px;
+                text-align: center;
+            `;
+            container.style.position = 'relative';
+            container.appendChild(tooltip);
+            
+            // Create vertical line indicator
+            const verticalLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            verticalLine.setAttribute('stroke', '#6c5ce7');
+            verticalLine.setAttribute('stroke-width', '1.5');
+            verticalLine.setAttribute('stroke-dasharray', '3,3');
+            verticalLine.setAttribute('opacity', '0');
+            verticalLine.setAttribute('x1', paddingLeft);
+            verticalLine.setAttribute('x2', paddingLeft);
+            verticalLine.setAttribute('y1', paddingTop);
+            verticalLine.setAttribute('y2', baseHeight - paddingBottom);
+            svg.appendChild(verticalLine);
+            
+            // Create hover circle
+            const hoverCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            hoverCircle.setAttribute('fill', '#6c5ce7');
+            hoverCircle.setAttribute('r', '5');
+            hoverCircle.setAttribute('opacity', '0');
+            svg.appendChild(hoverCircle);
+            
+            svg.addEventListener('mousemove', (e) => {
+                const rect = svg.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                
+                // Convert to SVG coordinates
+                const svgPoint = svg.createSVGPoint();
+                svgPoint.x = e.clientX;
+                svgPoint.y = e.clientY;
+                const ctm = svg.getScreenCTM();
+                if (ctm) {
+                    const svgX = (svgPoint.x - ctm.e) / ctm.a;
+                    const svgY = (svgPoint.y - ctm.f) / ctm.d;
+                    
+                    // Check if mouse is within chart area
+                    if (svgX >= paddingLeft && svgX <= baseWidth - paddingRight && 
+                        svgY >= paddingTop && svgY <= baseHeight - paddingBottom) {
+                        
+                        // Find closest data point
+                        const chartX = svgX - paddingLeft;
+                        const dataIndex = Math.round((chartX / chartWidth) * (values.length - 1));
+                        const clampedIndex = Math.max(0, Math.min(dataIndex, values.length - 1));
+                        
+                        const dataPoint = cumulativeData[clampedIndex];
+                        const value = values[clampedIndex];
+                        const pointX = paddingLeft + (clampedIndex / (values.length - 1)) * chartWidth;
+                        const pointY = baseHeight - paddingBottom - ((value - minValue) / range * chartHeight);
+                        
+                        // Show vertical line
+                        verticalLine.setAttribute('x1', pointX);
+                        verticalLine.setAttribute('x2', pointX);
+                        verticalLine.setAttribute('opacity', '0.6');
+                        
+                        // Show hover circle
+                        hoverCircle.setAttribute('cx', pointX);
+                        hoverCircle.setAttribute('cy', pointY);
+                        hoverCircle.setAttribute('opacity', '1');
+                        
+                        // Show tooltip with better formatting
+                        const date = new Date(dataPoint.date);
+                        const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                        const month = monthNames[date.getMonth()];
+                        const day = date.getDate();
+                        const year = date.getFullYear();
+                        const dateStr = `${month} ${day}, ${year}`;
+                        
+                        tooltip.innerHTML = `
+                            <div style="font-weight: 600; margin-bottom: 6px; font-size: 0.9em; color: var(--text-secondary); letter-spacing: 0.3px;">${dateStr}</div>
+                            <div style="color: var(--accent-blue); font-weight: 700; font-size: 1.1em; letter-spacing: -0.3px;">${formatCurrency(value)}</div>
+                        `;
+                        tooltip.style.opacity = '1';
+                        
+                        // Position tooltip
+                        const tooltipRect = tooltip.getBoundingClientRect();
+                        const containerRect = container.getBoundingClientRect();
+                        let tooltipX = e.clientX - containerRect.left + 15;
+                        let tooltipY = e.clientY - containerRect.top - tooltipRect.height - 15;
+                        
+                        // Keep tooltip within bounds
+                        if (tooltipX + tooltipRect.width > containerRect.width) {
+                            tooltipX = e.clientX - containerRect.left - tooltipRect.width - 15;
+                        }
+                        if (tooltipY < 0) {
+                            tooltipY = e.clientY - containerRect.top + 15;
+                        }
+                        
+                        tooltip.style.left = tooltipX + 'px';
+                        tooltip.style.top = tooltipY + 'px';
+                    }
+                }
+            });
+            
+            svg.addEventListener('mouseleave', () => {
+                verticalLine.setAttribute('opacity', '0');
+                hoverCircle.setAttribute('opacity', '0');
+                tooltip.style.opacity = '0';
+            });
+        }
+
+
+        // Filter Modal
+        function openFilterModal() {
+            const modal = document.createElement('div');
+            modal.className = 'modal';
+            modal.id = 'filterModal';
+            modal.style.display = 'block';
+            modal.innerHTML = `
+                <div class="modal-content" style="max-width: 600px;">
+                    <div class="modal-header">
+                        <h2>Filter Trades</h2>
+                        <button class="close" onclick="document.getElementById('filterModal').remove()">&times;</button>
+                    </div>
+                    <form onsubmit="applyFilters(event)">
+                        <div class="form-group">
+                            <label>Symbols (comma-separated)</label>
+                            <input type="text" id="filterSymbols" placeholder="e.g., AAPL, TSLA">
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Start Date</label>
+                                <input type="date" id="filterStartDate">
+                            </div>
+                            <div class="form-group">
+                                <label>End Date</label>
+                                <input type="date" id="filterEndDate">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Tags (comma-separated)</label>
+                            <input type="text" id="filterTags" placeholder="e.g., momentum, earnings">
+                        </div>
+                        <div style="display: flex; gap: 10px; margin-top: 20px;">
+                            <button type="submit" class="btn" style="flex: 1;">Apply Filters</button>
+                            <button type="button" class="btn btn-secondary" onclick="document.getElementById('filterModal').remove()" style="flex: 1;">Cancel</button>
+                        </div>
+                    </form>
+                    <div id="filterResults" style="margin-top: 20px;"></div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+        }
+
+        async function applyFilters(event) {
+            event.preventDefault();
+            const resultsDiv = document.getElementById('filterResults');
+            resultsDiv.innerHTML = '<div class="loading"><div class="spinner"></div>Filtering...</div>';
+            
+            const filters = {};
+            const symbols = document.getElementById('filterSymbols').value.trim();
+            if (symbols) {
+                filters.symbols = symbols.split(',').map(s => s.trim().toUpperCase());
+            }
+            
+            const startDate = document.getElementById('filterStartDate').value;
+            if (startDate) filters.start_date = startDate;
+            
+            const endDate = document.getElementById('filterEndDate').value;
+            if (endDate) filters.end_date = endDate;
+            
+            const tags = document.getElementById('filterTags').value.trim();
+            if (tags) {
+                filters.tags = tags.split(',').map(t => t.trim());
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE}/trades/filter`, {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({ filters })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    let html = `<div class="card"><h3>Filtered Results: ${data.count} trades</h3>`;
+                    if (data.trades.length > 0) {
+                        html += '<table class="trades-table"><thead><tr><th>Date</th><th>Symbol</th><th>P&L</th><th>Strategy</th></tr></thead><tbody>';
+                        data.trades.slice(0, 20).forEach(trade => {
+                            const pnl = (trade.sold_amount || 0) - (trade.quantity * trade.price * 100) - 2;
+                            html += `<tr>
+                                <td>${formatDatePST(trade.date, { month: 'short', day: 'numeric', year: 'numeric' })}</td>
+                                <td><strong>${trade.symbol}</strong></td>
+                                <td class="${getPnlClass(pnl)}">${formatCurrency(pnl)}</td>
+                                <td>${trade.strategy || '-'}</td>
+                            </tr>`;
+                        });
+                        html += '</tbody></table></div>';
+                    }
+                    resultsDiv.innerHTML = html;
+                }
+            } catch (error) {
+                resultsDiv.innerHTML = `<div class="alert alert-error">Error: ${error.message}</div>`;
+            }
+        }
+
+        async function exportTrades() {
+            try {
+                const response = await fetch(`${API_BASE}/export`, {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({ filters: {} })
+                });
+                
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `trades_export_${new Date().toISOString().split('T')[0]}.csv`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    window.URL.revokeObjectURL(url);
+                } else {
+                    alert('Error exporting trades');
+                }
+            } catch (error) {
+                alert('Error exporting: ' + error.message);
+            }
+        }
+
+
+        let portfolioCalendarDate = new Date();
+
+        function showPortfolioCalendar() {
+            portfolioCalendarDate = new Date();
+            document.getElementById('portfolioCalendarModal').style.display = 'block';
+            loadPortfolioCalendar();
+        }
+
+        function closePortfolioCalendar() {
+            document.getElementById('portfolioCalendarModal').style.display = 'none';
+        }
+
+        function changePortfolioMonth(direction) {
+            portfolioCalendarDate.setMonth(portfolioCalendarDate.getMonth() + direction);
+            loadPortfolioCalendar();
+        }
+
+        async function loadPortfolioCalendar() {
+            const year = portfolioCalendarDate.getFullYear();
+            const month = portfolioCalendarDate.getMonth() + 1;
+            
+            document.getElementById('portfolioCurrentMonth').textContent = 
+                `${monthNames[portfolioCalendarDate.getMonth()]} ${year}`;
+
+            try {
+                const response = await fetch(`${API_BASE}/portfolio/calendar?year=${year}&month=${month}`, {
+                    headers: getAuthHeaders()
+                });
+                const data = await response.json();
+                renderPortfolioCalendar(year, month, data);
+            } catch (error) {
+                console.error('Error loading portfolio calendar:', error);
+                renderPortfolioCalendar(year, month, {});
+            }
+        }
+
+        function renderPortfolioCalendar(year, month, portfolioData) {
+            const firstDay = new Date(year, month - 1, 1);
+            const lastDay = new Date(year, month, 0);
+            const daysInMonth = lastDay.getDate();
+            const startingDayOfWeek = firstDay.getDay();
+            
+            const today = new Date();
+            const isCurrentMonth = today.getFullYear() === year && today.getMonth() === month - 1;
+
+            let html = '<div class="calendar-grid" style="grid-template-columns: repeat(7, 1fr);">';
+            
+            // Day headers
+            dayNames.forEach(day => {
+                html += `<div class="day-header">${day}</div>`;
+            });
+
+            // Empty cells for days before month starts
+            for (let i = 0; i < startingDayOfWeek; i++) {
+                html += '<div class="calendar-day other-month"></div>';
+            }
+
+            // Days of the month
+            for (let day = 1; day <= daysInMonth; day++) {
+                const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                const portfolioEntry = portfolioData[dateStr];
+                const isToday = isCurrentMonth && day === today.getDate();
+                
+                html += `<div class="calendar-day ${isToday ? 'today' : ''}">`;
+                html += `<div class="day-number">${day}</div>`;
+                
+                if (portfolioEntry) {
+                    const amount = portfolioEntry.amount || 0;
+                    html += `<div class="day-pnl ${getPnlClass(0)}" style="font-size: 0.9em; margin-top: 5px;">${formatCurrency(amount)}</div>`;
+                } else {
+                    html += `<div class="empty-day" style="font-size: 0.75em; margin-top: 5px;">—</div>`;
+                }
+                
+                html += '</div>';
+            }
+
+            // Fill remaining days if month doesn't end on Saturday
+            const lastDayOfWeek = (startingDayOfWeek + daysInMonth - 1) % 7;
+            if (lastDayOfWeek !== 6) {
+                for (let i = lastDayOfWeek + 1; i < 7; i++) {
+                    html += '<div class="calendar-day other-month"></div>';
+                }
+            }
+
+            html += '</div>';
+            document.getElementById('portfolioCalendarGrid').innerHTML = html;
+        }
+
+        async function loadPortfolioSummary() {
+            try {
+                const response = await fetch(`${API_BASE}/portfolio?limit=60`, {
+                    headers: getAuthHeaders()
+                });
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    console.error('Error loading portfolio summary:', data.error);
+                    return;
+                }
+
+                const latestAmountEl = document.getElementById('portfolioLatestAmount');
+                const latestDateEl = document.getElementById('portfolioLatestDate');
+                const dayChangeEl = document.getElementById('portfolioDayChange');
+                const sinceStartEl = document.getElementById('portfolioSinceStart');
+                const sinceStartPctEl = document.getElementById('portfolioSinceStartPct');
+
+                if (!data.latest) {
+                    if (latestAmountEl) latestAmountEl.textContent = '$0.00';
+                    if (latestDateEl) latestDateEl.textContent = 'No data yet';
+                    if (dayChangeEl) {
+                        dayChangeEl.textContent = '$0.00';
+                        dayChangeEl.className = 'portfolio-metric-value neutral';
+                    }
+                    if (sinceStartEl) {
+                        sinceStartEl.textContent = '$0.00';
+                        sinceStartEl.className = 'portfolio-metric-value neutral';
+                    }
+                    if (sinceStartPctEl) sinceStartPctEl.textContent = '0%';
+                    return;
+                }
+
+                const latest = data.latest;
+                const change = data.change || 0;
+                const sinceStartChange = data.since_start_change || 0;
+                const sinceStartPercent = data.since_start_percent || 0;
+
+                if (latestAmountEl) latestAmountEl.textContent = formatCurrency(latest.amount || 0);
+                if (latestDateEl) {
+                    latestDateEl.textContent = formatDatePST(latest.date, { month: 'short', day: 'numeric', year: 'numeric' });
+                }
+                if (dayChangeEl) {
+                    if (change === 0) {
+                        dayChangeEl.textContent = formatCurrency(0);
+                        dayChangeEl.className = 'portfolio-metric-value neutral';
+                    } else if (change > 0) {
+                        dayChangeEl.textContent = formatCurrencyWithSign(change);
+                        dayChangeEl.className = 'portfolio-metric-value positive';
+                    } else {
+                        dayChangeEl.textContent = formatCurrency(change);
+                        dayChangeEl.className = 'portfolio-metric-value negative';
+                    }
+                }
+                if (sinceStartEl) {
+                    if (sinceStartChange === 0) {
+                        sinceStartEl.textContent = formatCurrency(0);
+                        sinceStartEl.className = 'portfolio-metric-value neutral';
+                    } else if (sinceStartChange > 0) {
+                        sinceStartEl.textContent = formatCurrencyWithSign(sinceStartChange);
+                        sinceStartEl.className = 'portfolio-metric-value positive';
+                    } else {
+                        sinceStartEl.textContent = formatCurrency(sinceStartChange);
+                        sinceStartEl.className = 'portfolio-metric-value negative';
+                    }
+                }
+                if (sinceStartPctEl) {
+                    sinceStartPctEl.textContent = `${sinceStartPercent}%`;
+                }
+            } catch (error) {
+                console.error('Error loading portfolio summary:', error);
+            }
+        }
+
+
+        function getGreeting() {
+            // Get current time in PST
+            const now = new Date();
+            const pstTime = new Date(now.toLocaleString("en-US", {timeZone: "America/Los_Angeles"}));
+            const hour = pstTime.getHours();
+            
+            let greeting;
+            if (hour >= 5 && hour < 12) {
+                greeting = "Good morning";
+            } else if (hour >= 12 && hour < 17) {
+                greeting = "Good afternoon";
+            } else if (hour >= 17 && hour < 22) {
+                greeting = "Good evening";
+            } else {
+                greeting = "Good evening";
+            }
+            
+            // Get user name from authenticated user or localStorage fallback
+            let userName = null;
+            if (currentUser && currentUser.name) {
+                userName = currentUser.name;
+            } else {
+                userName = localStorage.getItem('userName');
+            }
+            
+            if (userName) {
+                return `${greeting}, ${userName}!`;
+            } else {
+                return `${greeting}!`;
+            }
+        }
+
+        function updateGreeting() {
+            const greetingEl = document.getElementById('greetingText');
+            if (greetingEl) {
+                greetingEl.textContent = getGreeting();
+            }
+        }
+
+        function loadAllData() {
+            // Only load data if user is authenticated
+            if (!currentUser) {
+                return;
+            }
+            updateGreeting();
+            loadPnL();
+            loadCalendar();
+        }
+
+
+        window.onclick = function(event) {
+            const modals = ['addTradeModal', 'dayTradesModal', 'portfolioCalendarModal'];
+            modals.forEach(modalId => {
+                const modal = document.getElementById(modalId);
+                if (event.target == modal) {
+                    if (modalId === 'addTradeModal') closeAddTradeModal();
+                    if (modalId === 'dayTradesModal') closeDayTradesModal();
+                    if (modalId === 'portfolioCalendarModal') closePortfolioCalendar();
+                }
+            });
+        }
+
+        // Initialize currency select with saved preference
+        // Currency is now handled in the settings menu
+
+        // Navigation handlers
+        function setupNavigation() {
+            const navItems = document.querySelectorAll('.nav-item');
+            navItems.forEach(item => {
+                item.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const page = item.getAttribute('data-page');
+                    
+                    // Remove active class from all nav items
+                    navItems.forEach(nav => nav.classList.remove('active'));
+                    // Add active class to clicked item
+                    item.classList.add('active');
+                    
+                    // Page title is now handled by the page headers themselves
+                    
+                    // Show/hide content based on page
+                    switchPage(page);
+                });
+            });
+        }
+
+        function switchPage(page) {
+            // Hide all page views
+            document.querySelectorAll('.page-view').forEach(view => {
+                view.style.display = 'none';
+            });
+            
+            // Show the selected page
+            if (page === 'dashboard') {
+                document.getElementById('dashboard-view').style.display = 'block';
+                loadAllData();
+            } else if (page === 'daily-stats') {
+                document.getElementById('daily-stats-view').style.display = 'block';
+                loadDailyStats();
+            } else if (page === 'trade-log') {
+                document.getElementById('trade-log-view').style.display = 'block';
+                loadTradeLog();
+            } else if (page === 'reports') {
+                document.getElementById('reports-view').style.display = 'block';
+                loadReports();
+            }
+        }
+
+        async function loadDailyStats() {
+            try {
+                const response = await fetch(`${API_BASE}/trades?limit=1000`, {
+                    headers: getAuthHeaders()
+                });
+                const data = await response.json();
+                const trades = data.trades || [];
+                
+                // Group trades by date
+                const dailyStats = {};
+                trades.forEach(trade => {
+                    if (trade.action && ['SELL', 'CLOSE'].includes(trade.action.toUpperCase())) {
+                        const date = new Date(trade.date);
+                        const dateKey = date.toISOString().split('T')[0];
+                        if (!dailyStats[dateKey]) {
+                            dailyStats[dateKey] = { trades: [], pnl: 0, wins: 0, losses: 0 };
+                        }
+                        const pnl = parseFloat(trade.sold_amount || 0) - (parseFloat(trade.quantity || 0) * parseFloat(trade.price || 0) * 100) - (parseFloat(trade.transaction_fee || 0));
+                        dailyStats[dateKey].trades.push(trade);
+                        dailyStats[dateKey].pnl += pnl;
+                        if (pnl > 0) dailyStats[dateKey].wins++;
+                        else if (pnl < 0) dailyStats[dateKey].losses++;
+                    }
+                });
+                
+                const sortedDates = Object.keys(dailyStats).sort().reverse();
+                
+                let html = '<div class="stats-table">';
+                html += '<div class="stats-table-header">';
+                html += '<div>Date</div>';
+                html += '<div>Trades</div>';
+                html += '<div>Wins</div>';
+                html += '<div>Losses</div>';
+                html += '<div>Win Rate</div>';
+                html += '<div>Daily P&L</div>';
+                html += '</div>';
+                
+                sortedDates.forEach(date => {
+                    const stats = dailyStats[date];
+                    const winRate = stats.trades.length > 0 ? ((stats.wins / stats.trades.length) * 100).toFixed(1) : 0;
+                    const dateObj = new Date(date);
+                    const dateStr = formatDatePST(dateObj, { month: 'short', day: 'numeric', year: 'numeric' });
+                    
+                    html += `<div class="stats-table-row">`;
+                    html += `<div class="stats-table-cell">${dateStr}</div>`;
+                    html += `<div class="stats-table-cell">${stats.trades.length}</div>`;
+                    html += `<div class="stats-table-cell positive">${stats.wins}</div>`;
+                    html += `<div class="stats-table-cell negative">${stats.losses}</div>`;
+                    html += `<div class="stats-table-cell">${winRate}%</div>`;
+                    html += `<div class="stats-table-cell ${getPnlClass(stats.pnl)}">${formatCurrency(stats.pnl)}</div>`;
+                    html += `</div>`;
+                });
+                
+                html += '</div>';
+                document.getElementById('dailyStatsContent').innerHTML = html;
+            } catch (error) {
+                console.error('Error loading daily stats:', error);
+                document.getElementById('dailyStatsContent').innerHTML = 
+                    '<p style="text-align: center; color: var(--accent-red); padding: 20px;">Error loading daily stats</p>';
+            }
+        }
+
+        async function loadTradeLog() {
+            try {
+                const response = await fetch(`${API_BASE}/trades?limit=1000`, {
+                    headers: getAuthHeaders()
+                });
+                const data = await response.json();
+                const trades = data.trades || [];
+                
+                // Sort by date (newest first)
+                trades.sort((a, b) => new Date(b.date) - new Date(a.date));
+                
+                let html = '<div class="trades-table-container">';
+                html += '<table class="trades-table">';
+                html += '<thead>';
+                html += '<tr>';
+                html += '<th>Date</th>';
+                html += '<th>Symbol</th>';
+                html += '<th>Type</th>';
+                html += '<th>Quantity</th>';
+                html += '<th>Buy Price</th>';
+                html += '<th>Sold Price</th>';
+                html += '<th>P&L</th>';
+                html += '<th>Actions</th>';
+                html += '</tr>';
+                html += '</thead>';
+                html += '<tbody>';
+                
+                if (trades.length === 0) {
+                    html += '<tr><td colspan="8" style="text-align: center; padding: 40px; color: var(--text-secondary);">No trades found</td></tr>';
+                } else {
+                    trades.forEach(trade => {
+                        const date = new Date(trade.date);
+                        const dateStr = formatDatePST(date, { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+                        const pnl = parseFloat(trade.sold_amount || 0) - (parseFloat(trade.quantity || 0) * parseFloat(trade.price || 0) * 100) - (parseFloat(trade.transaction_fee || 0));
+                        const soldPricePerContract = parseFloat(trade.sold_price_per_contract || 0) || (parseFloat(trade.sold_amount || 0) / (parseFloat(trade.quantity || 1) * 100));
+                        
+                        html += '<tr>';
+                        html += `<td>${dateStr}</td>`;
+                        html += `<td><strong>${trade.symbol || 'N/A'}</strong></td>`;
+                        html += `<td>${trade.trade_type || 'OPTION'}</td>`;
+                        html += `<td>${trade.quantity || 0}</td>`;
+                        html += `<td>${formatCurrency(parseFloat(trade.price || 0))}</td>`;
+                        html += `<td>${formatCurrency(soldPricePerContract)}</td>`;
+                        html += `<td class="${getPnlClass(pnl)}"><strong>${formatCurrency(pnl)}</strong></td>`;
+                        html += `<td>`;
+                        html += `<button class="btn-small" onclick="editTrade('${trade.id}')">Edit</button> `;
+                        html += `<button class="btn-small btn-danger" onclick="deleteTrade('${trade.id}')">Delete</button>`;
+                        html += `</td>`;
+                        html += '</tr>';
+                    });
+                }
+                
+                html += '</tbody>';
+                html += '</table>';
+                html += '</div>';
+                
+                document.getElementById('tradeLogContent').innerHTML = html;
+            } catch (error) {
+                console.error('Error loading trade log:', error);
+                document.getElementById('tradeLogContent').innerHTML = 
+                    '<p style="text-align: center; color: var(--accent-red); padding: 20px;">Error loading trades</p>';
+            }
+        }
+
+        async function loadReports() {
+            try {
+                const response = await fetch(`${API_BASE}/pnl`, {
+                    headers: getAuthHeaders()
+                });
+                const data = await response.json();
+                
+                let html = '<div class="reports-grid">';
+                
+                // Performance Summary
+                html += '<div class="report-card">';
+                html += '<h3>Performance Summary</h3>';
+                html += '<div class="report-content">';
+                html += `<div class="report-item"><span>Total Trades:</span><strong>${data.total_trades || 0}</strong></div>`;
+                html += `<div class="report-item"><span>Winning Trades:</span><strong class="positive">${data.winning_trades || 0}</strong></div>`;
+                html += `<div class="report-item"><span>Losing Trades:</span><strong class="negative">${data.losing_trades || 0}</strong></div>`;
+                html += `<div class="report-item"><span>Win Rate:</span><strong>${(data.win_rate || 0).toFixed(1)}%</strong></div>`;
+                html += `<div class="report-item"><span>Profit Factor:</span><strong>${(data.profit_factor || 0).toFixed(2)}</strong></div>`;
+                html += '</div>';
+                html += '</div>';
+                
+                // P&L Breakdown
+                html += '<div class="report-card">';
+                html += '<h3>P&L Breakdown</h3>';
+                html += '<div class="report-content">';
+                html += `<div class="report-item"><span>Total P&L:</span><strong class="${getPnlClass(data.all_time_pnl || 0)}">${formatCurrency(data.all_time_pnl || 0)}</strong></div>`;
+                html += `<div class="report-item"><span>Today:</span><strong class="${getPnlClass(data.day_pnl || 0)}">${formatCurrency(data.day_pnl || 0)}</strong></div>`;
+                html += `<div class="report-item"><span>This Week:</span><strong class="${getPnlClass(data.week_pnl || 0)}">${formatCurrency(data.week_pnl || 0)}</strong></div>`;
+                html += `<div class="report-item"><span>This Month:</span><strong class="${getPnlClass(data.month_pnl || 0)}">${formatCurrency(data.month_pnl || 0)}</strong></div>`;
+                html += '</div>';
+                html += '</div>';
+                
+                // Trade Averages
+                html += '<div class="report-card">';
+                html += '<h3>Trade Averages</h3>';
+                html += '<div class="report-content">';
+                html += `<div class="report-item"><span>Avg Win:</span><strong class="positive">${formatCurrency(data.avg_win || 0)}</strong></div>`;
+                html += `<div class="report-item"><span>Avg Loss:</span><strong class="negative">${formatCurrency(data.avg_loss || 0)}</strong></div>`;
+                html += `<div class="report-item"><span>Expectancy:</span><strong class="${getPnlClass(data.expectancy || 0)}">${formatCurrency(data.expectancy || 0)}</strong></div>`;
+                html += '</div>';
+                html += '</div>';
+                
+                html += '</div>';
+                
+                document.getElementById('reportsContent').innerHTML = html;
+            } catch (error) {
+                console.error('Error loading reports:', error);
+                document.getElementById('reportsContent').innerHTML = 
+                    '<p style="text-align: center; color: var(--accent-red); padding: 20px;">Error loading reports</p>';
+            }
+        }
+
+        // Initialize
+        setupNavigation();
+        // Settings Menu Functions
+        function toggleSettingsMenu() {
+            const dropdown = document.getElementById('settingsDropdown');
+            dropdown.classList.toggle('show');
+        }
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function(event) {
+            const settingsContainer = document.querySelector('.settings-menu-container');
+            const dropdown = document.getElementById('settingsDropdown');
+            if (settingsContainer && !settingsContainer.contains(event.target)) {
+                dropdown.classList.remove('show');
+            }
+        });
+
+        // Authentication state
+        let currentUser = null;
+        let sessionToken = null;
+
+        // Get authentication headers for API requests
+        function getAuthHeaders() {
+            const headers = {
+                'Content-Type': 'application/json'
+            };
+            if (sessionToken) {
+                headers['X-Session-Token'] = sessionToken;
+            }
+            return headers;
+        }
+
+        // Check authentication status on page load
+        async function checkAuthStatus() {
+            sessionToken = localStorage.getItem('sessionToken');
+            if (sessionToken) {
+                try {
+                    const response = await fetch(`${API_BASE}/auth/session`, {
+                        headers: {
+                            'X-Session-Token': sessionToken
+                        }
+                    });
+                    const data = await response.json();
+                    if (data.authenticated) {
+                        currentUser = data.user;
+                        updateAuthUI();
+                        updateGreeting();
+                        loadAllData(); // Load data only after authentication
+                    } else {
+                        // Session expired or invalid - require sign in
+                        localStorage.removeItem('sessionToken');
+                        sessionToken = null;
+                        currentUser = null;
+                        updateAuthUI(); // Will show overlay and block access
+                    }
+                } catch (error) {
+                    console.error('Error checking auth status:', error);
+                    // On error, require sign in
+                    sessionToken = null;
+                    currentUser = null;
+                    updateAuthUI(); // Will show overlay and block access
+                }
+            } else {
+                // No session token - require authentication
+                updateAuthUI(); // Will show overlay and block access
+            }
+        }
+
+        function updateAuthUI() {
+            const authOverlay = document.getElementById('authOverlay');
+            const mainContainer = document.getElementById('mainContainer');
+            const authButtons = document.getElementById('authButtons');
+            const userMenu = document.getElementById('userMenu');
+            
+            if (currentUser) {
+                // User is signed in - hide overlay, show content
+                if (authOverlay) {
+                    authOverlay.classList.add('hidden');
+                }
+                if (mainContainer) {
+                    mainContainer.classList.remove('blur-background');
+                }
+                if (authButtons) authButtons.style.display = 'none';
+                if (userMenu) userMenu.style.display = 'block';
+            } else {
+                // User is not signed in - show overlay, blur background, block access
+                if (authOverlay) {
+                    authOverlay.classList.remove('hidden');
+                }
+                if (mainContainer) {
+                    mainContainer.classList.add('blur-background');
+                }
+                if (authButtons) authButtons.style.display = 'block';
+                if (userMenu) userMenu.style.display = 'none';
+            }
+        }
+
+        function switchAuthTab(tab) {
+            const signInTab = document.querySelector('.auth-tab[onclick*="signin"]');
+            const signUpTab = document.querySelector('.auth-tab[onclick*="signup"]');
+            const signInForm = document.getElementById('authSignInForm');
+            const signUpForm = document.getElementById('authSignUpForm');
+            const signInError = document.getElementById('authSignInError');
+            const signUpError = document.getElementById('authSignUpError');
+
+            // Clear errors
+            if (signInError) {
+                signInError.classList.remove('show');
+                signInError.textContent = '';
+            }
+            if (signUpError) {
+                signUpError.classList.remove('show');
+                signUpError.textContent = '';
+            }
+
+            if (tab === 'signin') {
+                signInTab.classList.add('active');
+                signUpTab.classList.remove('active');
+                signInForm.classList.add('active');
+                signUpForm.classList.remove('active');
+            } else {
+                signInTab.classList.remove('active');
+                signUpTab.classList.add('active');
+                signInForm.classList.remove('active');
+                signUpForm.classList.add('active');
+            }
+        }
+
+        async function handleAuthSignIn(event) {
+            event.preventDefault();
+            const email = document.getElementById('authSignInEmail').value.trim();
+            const password = document.getElementById('authSignInPassword').value;
+            const errorDiv = document.getElementById('authSignInError');
+            
+            if (!email || !password) {
+                errorDiv.textContent = 'Please enter both email and password';
+                errorDiv.classList.add('show');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/auth/signin`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ email, password })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    sessionToken = data.session_token;
+                    currentUser = data.user;
+                    localStorage.setItem('sessionToken', sessionToken);
+                    localStorage.setItem('userName', currentUser.name);
+                    localStorage.setItem('userEmail', currentUser.email);
+                    
+                    showAlert('Signed in successfully!', 'success');
+                    updateAuthUI();
+                    updateGreeting();
+                    loadAllData(); // Load user's data after sign in
+                } else {
+                    errorDiv.textContent = data.error || 'Sign in failed';
+                    errorDiv.classList.add('show');
+                }
+            } catch (error) {
+                errorDiv.textContent = 'Network error. Please try again.';
+                errorDiv.classList.add('show');
+                console.error('Sign in error:', error);
+            }
+        }
+
+        async function handleAuthSignUp(event) {
+            event.preventDefault();
+            const name = document.getElementById('authSignUpName').value.trim();
+            const email = document.getElementById('authSignUpEmail').value.trim();
+            const password = document.getElementById('authSignUpPassword').value;
+            const passwordConfirm = document.getElementById('authSignUpPasswordConfirm').value;
+            const errorDiv = document.getElementById('authSignUpError');
+            
+            // Validation
+            if (!name || !email || !password || !passwordConfirm) {
+                errorDiv.textContent = 'Please fill in all fields';
+                errorDiv.classList.add('show');
+                return;
+            }
+
+            if (password.length < 6) {
+                errorDiv.textContent = 'Password must be at least 6 characters';
+                errorDiv.classList.add('show');
+                return;
+            }
+
+            if (password !== passwordConfirm) {
+                errorDiv.textContent = 'Passwords do not match';
+                errorDiv.classList.add('show');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/auth/signup`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ email, password, name })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showAlert('Account created successfully! Signing you in...', 'success');
+                    // Automatically sign in after account creation
+                    setTimeout(async () => {
+                        const signInResponse = await fetch(`${API_BASE}/auth/signin`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({ email, password })
+                        });
+                        const signInData = await signInResponse.json();
+                        if (signInData.success) {
+                            sessionToken = signInData.session_token;
+                            currentUser = signInData.user;
+                            localStorage.setItem('sessionToken', sessionToken);
+                            localStorage.setItem('userName', currentUser.name);
+                            localStorage.setItem('userEmail', currentUser.email);
+                            updateAuthUI();
+                            updateGreeting();
+                        }
+                    }, 500);
+                } else {
+                    errorDiv.textContent = data.error || 'Account creation failed';
+                    errorDiv.classList.add('show');
+                }
+            } catch (error) {
+                errorDiv.textContent = 'Network error. Please try again.';
+                errorDiv.classList.add('show');
+                console.error('Create account error:', error);
+            }
+        }
+
+        // Function to open sign-in (uses authentication overlay)
+        function openSignInModal() {
+            // Switch to sign in tab in overlay
+            switchAuthTab('signin');
+            // Force show the overlay
+            const authOverlay = document.getElementById('authOverlay');
+            const mainContainer = document.getElementById('mainContainer');
+            if (authOverlay) {
+                authOverlay.classList.remove('hidden');
+            }
+            if (mainContainer) {
+                mainContainer.classList.add('blur-background');
+            }
+            // Close settings dropdown if open
+            const settingsDropdown = document.getElementById('settingsDropdown');
+            if (settingsDropdown) {
+                settingsDropdown.classList.remove('show');
+            }
+        }
+
+        function closeSignInModal() {
+            // This is handled by the overlay system
+            // Only hide if user is not authenticated
+            if (!currentUser) {
+                const authOverlay = document.getElementById('authOverlay');
+                if (authOverlay) {
+                    authOverlay.classList.add('hidden');
+                }
+            }
+        }
+
+        function openCreateAccountModal() {
+            // Switch to sign up tab in overlay
+            switchAuthTab('signup');
+            updateAuthUI(); // Show overlay if not already shown
+        }
+
+        async function handleSignOut() {
+            if (sessionToken) {
+                try {
+                    await fetch(`${API_BASE}/auth/signout`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ session_token: sessionToken })
+                    });
+                } catch (error) {
+                    console.error('Sign out error:', error);
+                }
+            }
+            
+            // Clear local storage
+            localStorage.removeItem('sessionToken');
+            localStorage.removeItem('userName');
+            localStorage.removeItem('userEmail');
+            
+            sessionToken = null;
+            currentUser = null;
+            
+            // Show authentication overlay after sign out
+            const authOverlay = document.getElementById('authOverlay');
+            const mainContainer = document.getElementById('mainContainer');
+            if (authOverlay) {
+                authOverlay.classList.remove('hidden');
+            }
+            if (mainContainer) {
+                mainContainer.classList.add('blur-background');
+            }
+            // Switch to sign in tab
+            switchAuthTab('signin');
+            
+            updateAuthUI();
+            updateGreeting();
+            showAlert('Signed out successfully', 'success');
+            document.getElementById('settingsDropdown').classList.remove('show');
+        }
+
+        function openProfileModal() {
+            if (!currentUser) {
+                openSignInModal();
+                return;
+            }
+            
+            document.getElementById('profileModal').style.display = 'block';
+            document.getElementById('settingsDropdown').classList.remove('show');
+            
+            document.getElementById('profileName').textContent = currentUser.name || 'Not set';
+            document.getElementById('profileEmail').textContent = currentUser.email || 'Not set';
+        }
+
+        function closeProfileModal() {
+            document.getElementById('profileModal').style.display = 'none';
+        }
+
+        async function openCurrencySettings() {
+            document.getElementById('currencySettingsModal').style.display = 'block';
+            document.getElementById('settingsDropdown').classList.remove('show');
+            
+            // Fetch latest exchange rates
+            await fetchExchangeRates();
+            
+            // Set current currency
+            const savedCurrency = localStorage.getItem('currency') || 'USD';
+            document.getElementById('currencySelectModal').value = savedCurrency;
+            
+            // Update rate display
+            updateExchangeRateDisplay(savedCurrency);
+        }
+        
+        function updateExchangeRateDisplay(currency) {
+            const rate = exchangeRates[currency] || 1.0;
+            const rateInfo = currencyInfo[currency];
+            const rateText = currency === 'USD' 
+                ? '1.00 USD' 
+                : `1 USD = ${rate.toFixed(4)} ${currency}`;
+            document.getElementById('currentRate').textContent = rateText;
+        }
+
+        function closeCurrencySettingsModal() {
+            document.getElementById('currencySettingsModal').style.display = 'none';
+        }
+
+        function changeCurrencyFromModal() {
+            const select = document.getElementById('currencySelectModal');
+            currentCurrency = select.value;
+            localStorage.setItem('currency', currentCurrency);
+            updateExchangeRateDisplay(currentCurrency);
+            loadAllData();
+            showAlert('Currency updated successfully!', 'success');
+        }
+
+        function openSettingsModal() {
+            document.getElementById('settingsModal').style.display = 'block';
+            document.getElementById('settingsDropdown').classList.remove('show');
+        }
+
+        function closeSettingsModal() {
+            document.getElementById('settingsModal').style.display = 'none';
+        }
+
+        function changeTheme() {
+            const theme = document.getElementById('themeSelect').value;
+            // Theme change functionality can be added here
+            showAlert('Theme preference saved!', 'success');
+        }
+
+        // Check authentication status on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            checkAuthStatus();
+        });
+
+        // Initialize: Fetch exchange rates and load data
+        fetchExchangeRates().then(() => {
+            loadAllData();
+        });
+        
+        // Update exchange rates every hour
+        setInterval(() => {
+            fetchExchangeRates();
+        }, 3600000); // 1 hour
+        
+        // Refresh PnL and charts every 30 seconds
+        setInterval(() => {
+            loadPnL();
+        }, 30000);
+    </script>
+</body>
+</html>

@@ -1,0 +1,20 @@
+services:
+  - type: web
+    name: quantify-trading-journal
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: python app.py
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: quantify-db
+          property: connectionString
+      - key: RENDER
+        value: true
+
+databases:
+  - name: quantify-db
+    databaseName: quantify
+    user: quantify_user
+    plan: free
+

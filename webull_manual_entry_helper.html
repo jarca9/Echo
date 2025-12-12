@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Webull Trade Entry Helper</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0a0e27;
+            color: #e4e6eb;
+            padding: 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        h1 {
+            margin-bottom: 20px;
+            color: #e4e6eb;
+        }
+        .instructions {
+            background: #1e2838;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border: 1px solid #2d3748;
+        }
+        .instructions h2 {
+            margin-bottom: 10px;
+            color: #00d4aa;
+        }
+        .instructions ol {
+            margin-left: 20px;
+            line-height: 1.8;
+        }
+        .instructions li {
+            margin-bottom: 8px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #b0b3b8;
+            font-size: 0.9em;
+        }
+        input, select {
+            width: 100%;
+            padding: 10px;
+            background: #1e2838;
+            border: 1px solid #2d3748;
+            border-radius: 6px;
+            color: #e4e6eb;
+            font-size: 1em;
+        }
+        input:focus, select:focus {
+            outline: none;
+            border-color: #5352ed;
+        }
+        button {
+            background: linear-gradient(135deg, #5352ed 0%, #6c5ce7 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: 600;
+            width: 100%;
+            margin-top: 10px;
+        }
+        button:hover {
+            background: linear-gradient(135deg, #6c5ce7 0%, #7b6cef 100%);
+        }
+        .quick-add {
+            background: #1e2838;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #2d3748;
+        }
+        .copy-button {
+            background: #00d4aa;
+            margin-top: 15px;
+        }
+        .copy-button:hover {
+            background: #00b894;
+        }
+        .output {
+            background: #141b2d;
+            padding: 15px;
+            border-radius: 6px;
+            margin-top: 15px;
+            border: 1px solid #2d3748;
+            font-family: monospace;
+            font-size: 0.9em;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        .tip {
+            background: #252d42;
+            padding: 15px;
+            border-radius: 6px;
+            margin-top: 15px;
+            border-left: 3px solid #5352ed;
+        }
+        .tip strong {
+            color: #5352ed;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Webull Trade Entry Helper</h1>
+        
+        <div class="instructions">
+            <h2>Since CSV Export Isn't Available:</h2>
+            <ol>
+                <li>Open your Webull app and go to your trade history</li>
+                <li>For each trade, fill in the form below with the details</li>
+                <li>Click "Generate Trade JSON" to create the trade data</li>
+                <li>Copy the JSON output</li>
+                <li>Use the "Quick Add" feature in your journal or manually add via API</li>
+            </ol>
+        </div>
+
+        <div class="quick-add">
+            <h2 style="margin-bottom: 15px;">Trade Entry Form</h2>
+            
+            <div class="form-group">
+                <label>Symbol *</label>
+                <input type="text" id="symbol" placeholder="e.g., AAPL" style="text-transform: uppercase;">
+            </div>
+
+            <div class="form-group">
+                <label>Trade Type *</label>
+                <select id="tradeType">
+                    <option value="STOCK">Stock</option>
+                    <option value="OPTION">Option</option>
+                </select>
+            </div>
+
+            <div id="optionFields" style="display: none;">
+                <div class="form-group">
+                    <label>Option Type</label>
+                    <select id="optionType">
+                        <option value="CALL">Call</option>
+                        <option value="PUT">Put</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Strike Price</label>
+                    <input type="number" id="strike" step="0.01" placeholder="e.g., 150.00">
+                </div>
+                <div class="form-group">
+                    <label>Expiration Date</label>
+                    <input type="date" id="expiration">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Action *</label>
+                <select id="action">
+                    <option value="BUY">Buy</option>
+                    <option value="SELL">Sell</option>
+                    <option value="OPEN">Open</option>
+                    <option value="CLOSE">Close</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Quantity (Contracts/Shares) *</label>
+                <input type="number" id="quantity" step="0.01" placeholder="e.g., 1">
+            </div>
+
+            <div class="form-group">
+                <label>Price per Contract/Share *</label>
+                <input type="number" id="price" step="0.01" placeholder="e.g., 2.50">
+            </div>
+
+            <div class="form-group">
+                <label>Date & Time *</label>
+                <input type="datetime-local" id="date">
+            </div>
+
+            <div class="form-group">
+                <label>Transaction Fee</label>
+                <input type="number" id="fee" step="0.01" value="0" placeholder="e.g., 1.00">
+            </div>
+
+            <button onclick="generateTrade()">Generate Trade JSON</button>
+            
+            <div id="output" class="output" style="display: none;"></div>
+            <button class="copy-button" onclick="copyToClipboard()" style="display: none;" id="copyBtn">Copy JSON</button>
+        </div>
+
+        <div class="tip">
+            <strong>Tip:</strong> You can also take a screenshot of your Webull trade history and manually enter the trades. 
+            This helper makes it faster by generating the correct format for you.
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('tradeType').addEventListener('change', function() {
+            const optionFields = document.getElementById('optionFields');
+            if (this.value === 'OPTION') {
+                optionFields.style.display = 'block';
+            } else {
+                optionFields.style.display = 'none';
+            }
+        });
+
+        // Set default date to now
+        const now = new Date();
+        now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+        document.getElementById('date').value = now.toISOString().slice(0, 16);
+
+        function generateTrade() {
+            const symbol = document.getElementById('symbol').value.toUpperCase();
+            const tradeType = document.getElementById('tradeType').value;
+            const action = document.getElementById('action').value;
+            const quantity = parseFloat(document.getElementById('quantity').value);
+            const price = parseFloat(document.getElementById('price').value);
+            const date = document.getElementById('date').value;
+            const fee = parseFloat(document.getElementById('fee').value) || 0;
+
+            if (!symbol || !quantity || !price || !date) {
+                alert('Please fill in all required fields');
+                return;
+            }
+
+            const trade = {
+                symbol: symbol,
+                action: action,
+                quantity: quantity,
+                price: price,
+                date: new Date(date).toISOString(),
+                trade_type: tradeType,
+                transaction_fee: fee
+            };
+
+            if (tradeType === 'OPTION') {
+                trade.option_type = document.getElementById('optionType').value;
+                trade.strike = parseFloat(document.getElementById('strike').value) || 0;
+                const expDate = document.getElementById('expiration').value;
+                if (expDate) {
+                    trade.expiration = expDate;
+                }
+            }
+
+            const output = document.getElementById('output');
+            output.textContent = JSON.stringify(trade, null, 2);
+            output.style.display = 'block';
+            document.getElementById('copyBtn').style.display = 'block';
+        }
+
+        function copyToClipboard() {
+            const output = document.getElementById('output');
+            navigator.clipboard.writeText(output.textContent).then(() => {
+                alert('Copied to clipboard!');
+            });
+        }
+    </script>
+</body>
+</html>
+
+

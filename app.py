@@ -56,52 +56,10 @@ def get_current_user_id() -> Optional[str]:
     return None
 
 def migrate_existing_data_to_user(user_id: str):
-    """Migrate existing data files to user-specific storage"""
-    user_tracker = get_user_tracker(user_id)
-    user_data_dir = user_tracker.user_data_dir
-    
-    # Check if user already has data
-    if os.path.exists(user_tracker.trades_file):
-        return  # Already migrated
-    
-    # Migrate trades
-    old_trades_file = 'trades_history.json'
-    if os.path.exists(old_trades_file):
-        try:
-            with open(old_trades_file, 'r') as f:
-                trades = json.load(f)
-            if trades:
-                user_tracker.trades = trades
-                user_tracker.save_trades()
-                print(f"Migrated {len(trades)} trades to user {user_id}")
-        except Exception as e:
-            print(f"Error migrating trades: {e}")
-    
-    # Migrate portfolio history
-    old_portfolio_file = 'portfolio_history.json'
-    if os.path.exists(old_portfolio_file):
-        try:
-            with open(old_portfolio_file, 'r') as f:
-                portfolio = json.load(f)
-            if portfolio:
-                user_tracker.portfolio_history = portfolio if isinstance(portfolio, list) else []
-                user_tracker.save_portfolio_history()
-                print(f"Migrated portfolio history to user {user_id}")
-        except Exception as e:
-            print(f"Error migrating portfolio: {e}")
-    
-    # Migrate portfolio adjustments
-    old_adjustments_file = 'portfolio_adjustments.json'
-    if os.path.exists(old_adjustments_file):
-        try:
-            with open(old_adjustments_file, 'r') as f:
-                adjustments = json.load(f)
-            if adjustments:
-                user_tracker.portfolio_adjustments = adjustments if isinstance(adjustments, list) else []
-                user_tracker.save_portfolio_adjustments()
-                print(f"Migrated portfolio adjustments to user {user_id}")
-        except Exception as e:
-            print(f"Error migrating adjustments: {e}")
+    """Migrate existing data files to user-specific storage (legacy - now using database)"""
+    # This function is no longer needed - data is stored in database
+    # Migration from JSON files should be done using migrate_trades.py script
+    pass
 
 # Brokerage integration (optional - only import if module exists)
 try:
@@ -143,14 +101,20 @@ def get_trades():
     """Get recent trades for the current user"""
     try:
         user_id = get_current_user_id()
-        # Migrate existing data if this is first access
-        if user_id:
-            migrate_existing_data_to_user(user_id)
+        if not user_id:
+            # No user ID - return empty (user not authenticated)
+            return jsonify({'trades': [], 'count': 0})
+        
+        # Migrate existing data if this is first access (legacy support)
+        # Note: This function is for migrating old JSON files, not needed for database
+        # migrate_existing_data_to_user(user_id)
+        
         user_tracker = get_user_tracker(user_id)
         limit = request.args.get('limit', 50, type=int)
         trades = user_tracker.get_recent_trades(limit)
         return jsonify({'trades': trades, 'count': len(trades)})
     except Exception as e:
+        print(f"Error in get_trades: {e}")  # Debug logging
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/trades', methods=['POST'])
@@ -743,8 +707,14 @@ if __name__ == '__main__':
         init_db()
         print("✓ Database initialized")
     except Exception as e:
-        print(f"⚠ Database initialization warning: {e}")
-        print("  (This is normal if database doesn't exist yet)")
+        print(f"❌ Database initialization failed: {e}")
+        print("  This is required for the app to work. Please check:")
+        print("  1. DATABASE_URL environment variable is set")
+        print("  2. Database is accessible")
+        print("  3. Database credentials are correct")
+        # Don't exit - let it fail on first request so user can see the error
+        # import sys
+        # sys.exit(1)
     
     # Try to use port 5001 if 5000 is busy, or use command line argument
     port = 5001

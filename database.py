@@ -10,19 +10,48 @@ import os
 Base = declarative_base()
 
 # Database connection
-# Render provides DATABASE_URL automatically
-# For local development, set DATABASE_URL environment variable or install PostgreSQL
-# Example: export DATABASE_URL="postgresql://user:password@localhost/quantify"
-DATABASE_URL = os.environ.get('DATABASE_URL')
-if not DATABASE_URL:
-    # Fallback for local development (requires PostgreSQL installed)
-    DATABASE_URL = 'postgresql://localhost/quantify'
-    print("⚠ Warning: DATABASE_URL not set. Using default local PostgreSQL.")
-    print("   For local development, install PostgreSQL and set DATABASE_URL")
-    print("   For Render deployment, DATABASE_URL is set automatically")
+# Render provides DATABASE_URL automatically (PostgreSQL)
+# For local development, uses SQLite (no setup needed)
+def get_database_url():
+    """Get database URL from environment or use SQLite for local dev"""
+    url = os.environ.get('DATABASE_URL')
+    if not url:
+        # Use SQLite for local development (no installation needed)
+        url = 'sqlite:///quantify.db'
+        print("ℹ️  Using SQLite for local development (no setup needed)")
+        print("   For Render deployment, PostgreSQL is used automatically")
+    return url
 
-engine = create_engine(DATABASE_URL, echo=False)
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+DATABASE_URL = get_database_url()
+
+# Initialize engine and SessionLocal (will be created on first use if needed)
+engine = None
+SessionLocal = None
+
+def create_engine_instance():
+    """Create database engine instance"""
+    url = get_database_url()  # Get fresh URL each time
+    # SQLite needs different connection string format
+    if url.startswith('sqlite'):
+        return create_engine(url, echo=False, connect_args={'check_same_thread': False})
+    else:
+        # PostgreSQL connection - handle connection string format
+        # Render provides DATABASE_URL in format: postgresql://user:pass@host:port/dbname
+        # SQLAlchemy 2.0+ works with postgresql:// but psycopg2 is the driver
+        if url.startswith('postgresql://') and '+psycopg2' not in url:
+            # Convert to SQLAlchemy format with driver
+            url = url.replace('postgresql://', 'postgresql+psycopg2://', 1)
+        return create_engine(url, echo=False, pool_pre_ping=True)
+
+# Try to create engine at import time, but don't fail if it doesn't work
+try:
+    engine = create_engine_instance()
+    SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+except Exception as e:
+    print(f"⚠️  Warning: Database connection error at import: {e}")
+    print("   Will retry on first use...")
+    engine = None
+    SessionLocal = None
 
 
 class User(Base):
@@ -115,11 +144,25 @@ class PortfolioAdjustment(Base):
 
 def init_db():
     """Initialize database tables"""
-    Base.metadata.create_all(bind=engine)
+    global engine, SessionLocal
+    try:
+        if engine is None:
+            engine = create_engine_instance()
+            SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+        Base.metadata.create_all(bind=engine)
+        print("✓ Database tables created/verified")
+    except Exception as e:
+        print(f"⚠️  Database initialization error: {e}")
+        raise
 
 
 def get_db():
     """Get database session"""
+    global engine, SessionLocal
+    # Recreate engine if it wasn't created at import time
+    if engine is None or SessionLocal is None:
+        engine = create_engine_instance()
+        SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
     return SessionLocal()
 
 

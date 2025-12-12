@@ -2657,11 +2657,13 @@
             <div id="profileContent">
                 <div class="form-group">
                     <label>Name</label>
-                    <div style="padding: 10px; background: var(--bg-tertiary); border-radius: 6px; color: var(--text-primary);" id="profileName">Loading...</div>
+                    <input type="text" id="profileNameInput" placeholder="Your name" style="width: 100%; padding: 10px; background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border-color); border-radius: 6px; font-size: 1em;">
+                    <button type="button" class="btn" onclick="saveProfileName()" style="width: 100%; margin-top: 10px;">Save Name</button>
                 </div>
                 <div class="form-group">
                     <label>Email</label>
-                    <div style="padding: 10px; background: var(--bg-tertiary); border-radius: 6px; color: var(--text-primary);" id="profileEmail">Loading...</div>
+                    <div style="padding: 10px; background: var(--bg-tertiary); border-radius: 6px; color: var(--text-secondary);" id="profileEmail">Loading...</div>
+                    <small style="color: var(--text-secondary); font-size: 0.85em;">Email cannot be changed</small>
                 </div>
                 <div class="form-group" style="margin-top: 20px;">
                     <button type="button" class="btn btn-secondary" onclick="closeProfileModal()" style="width: 100%;">Close</button>
@@ -2710,6 +2712,11 @@
                 <button class="close" onclick="closeSettingsModal()">&times;</button>
             </div>
             <div class="form-group">
+                <label>Name</label>
+                <input type="text" id="userNameInput" placeholder="Your name" style="width: 100%; padding: 10px; background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border-color); border-radius: 6px; font-size: 1em;">
+                <button type="button" class="btn" onclick="updateUserName()" style="width: 100%; margin-top: 10px;">Save Name</button>
+            </div>
+            <div class="form-group" style="margin-top: 20px;">
                 <label>Theme</label>
                 <select id="themeSelect" onchange="changeTheme()" style="width: 100%; padding: 10px; background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border-color); border-radius: 6px; font-size: 1em;">
                     <option value="dark">Dark</option>
@@ -2971,15 +2978,24 @@
             document.getElementById('currentMonth').textContent = 
                 `${monthNames[currentDate.getMonth()]} ${year}`;
 
+            // Always render calendar, even if API fails or returns empty data
             fetch(`${API_BASE}/calendar?year=${year}&month=${month}`, {
                 headers: getAuthHeaders()
             })
-                .then(res => res.json())
+                .then(res => {
+                    if (!res.ok) {
+                        // If API fails, still render empty calendar
+                        return {};
+                    }
+                    return res.json();
+                })
                 .then(data => {
-                    renderCalendar(year, month, data);
+                    // Always render calendar, even with empty data
+                    renderCalendar(year, month, data || {});
                 })
                 .catch(err => {
                     console.error('Error loading calendar:', err);
+                    // Always render calendar, even on error
                     renderCalendar(year, month, {});
                 });
         }
@@ -4289,13 +4305,15 @@
         }
 
         function loadAllData() {
-            // Only load data if user is authenticated
+            // Always load calendar, even if not authenticated
+            loadCalendar();
+            
+            // Only load other data if user is authenticated
             if (!currentUser) {
                 return;
             }
             updateGreeting();
             loadPnL();
-            loadCalendar();
         }
 
 
@@ -4866,12 +4884,52 @@
             document.getElementById('profileModal').style.display = 'block';
             document.getElementById('settingsDropdown').classList.remove('show');
             
-            document.getElementById('profileName').textContent = currentUser.name || 'Not set';
+            // Populate name input with current name
+            document.getElementById('profileNameInput').value = currentUser.name || '';
             document.getElementById('profileEmail').textContent = currentUser.email || 'Not set';
         }
 
         function closeProfileModal() {
             document.getElementById('profileModal').style.display = 'none';
+        }
+
+        async function saveProfileName() {
+            const newName = document.getElementById('profileNameInput').value.trim();
+            
+            if (!newName) {
+                showAlert('Name cannot be empty', 'error');
+                return;
+            }
+            
+            if (newName.length < 2) {
+                showAlert('Name must be at least 2 characters', 'error');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE}/auth/update-name`, {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({ name: newName })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Update current user object
+                    if (currentUser) {
+                        currentUser.name = newName;
+                    }
+                    // Update greeting
+                    updateGreeting();
+                    showAlert('Name updated successfully!', 'success');
+                } else {
+                    showAlert(data.error || 'Failed to update name', 'error');
+                }
+            } catch (error) {
+                console.error('Error updating name:', error);
+                showAlert('Error connecting to server', 'error');
+            }
         }
 
         async function openCurrencySettings() {
@@ -4914,6 +4972,10 @@
         function openSettingsModal() {
             document.getElementById('settingsModal').style.display = 'block';
             document.getElementById('settingsDropdown').classList.remove('show');
+            // Populate name field with current user's name
+            if (currentUser) {
+                document.getElementById('userNameInput').value = currentUser.name || '';
+            }
         }
 
         function closeSettingsModal() {
@@ -4926,8 +4988,49 @@
             showAlert('Theme preference saved!', 'success');
         }
 
+        async function updateUserName() {
+            const newName = document.getElementById('userNameInput').value.trim();
+            
+            if (!newName) {
+                showAlert('Name cannot be empty', 'error');
+                return;
+            }
+            
+            if (newName.length < 2) {
+                showAlert('Name must be at least 2 characters', 'error');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE}/auth/update-name`, {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({ name: newName })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Update current user object
+                    if (currentUser) {
+                        currentUser.name = newName;
+                    }
+                    // Update greeting
+                    updateGreeting();
+                    showAlert('Name updated successfully!', 'success');
+                } else {
+                    showAlert(data.error || 'Failed to update name', 'error');
+                }
+            } catch (error) {
+                console.error('Error updating name:', error);
+                showAlert('Error connecting to server', 'error');
+            }
+        }
+
         // Check authentication status on page load
         document.addEventListener('DOMContentLoaded', function() {
+            // Always load calendar first, even before authentication check
+            loadCalendar();
             checkAuthStatus();
         });
 

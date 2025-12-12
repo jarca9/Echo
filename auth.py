@@ -194,3 +194,31 @@ class AuthManager:
             return None
         finally:
             close_db(db)
+    
+    def update_user_name(self, user_id: str, new_name: str) -> Dict:
+        """Update user's name"""
+        if not new_name or len(new_name.strip()) < 2:
+            return {'success': False, 'error': 'Name must be at least 2 characters'}
+        
+        db = get_db()
+        try:
+            user = db.query(User).filter(User.id == user_id).first()
+            if not user:
+                return {'success': False, 'error': 'User not found'}
+            
+            user.name = new_name.strip()
+            db.commit()
+            
+            return {
+                'success': True,
+                'user': {
+                    'id': user.id,
+                    'email': user.email,
+                    'name': user.name
+                }
+            }
+        except Exception as e:
+            db.rollback()
+            return {'success': False, 'error': f'Database error: {str(e)}'}
+        finally:
+            close_db(db)

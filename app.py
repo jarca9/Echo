@@ -270,30 +270,20 @@ def get_calendar():
     """Get trades for calendar view for the current user"""
     try:
         user_id = get_current_user_id()
-        # If no user_id, try to find the first user with data (for backward compatibility)
         if not user_id:
-            # Check if default user has data, if not, try to find actual user
-            default_tracker = get_user_tracker('default')
-            if len(default_tracker.trades) == 0:
-                # Look for user data directories
-                user_data_base = 'user_data'
-                if os.path.exists(user_data_base):
-                    user_dirs = [d for d in os.listdir(user_data_base) if os.path.isdir(os.path.join(user_data_base, d))]
-                    if user_dirs:
-                        # Use the first user directory found
-                        user_id = user_dirs[0]
-                        migrate_existing_data_to_user(user_id)
+            # Return empty calendar data if not authenticated (calendar will still show)
+            return jsonify({})
         
-        # Migrate existing data if this is first access
-        if user_id:
-            migrate_existing_data_to_user(user_id)
         user_tracker = get_user_tracker(user_id)
         year = request.args.get('year', datetime.now().year, type=int)
         month = request.args.get('month', datetime.now().month, type=int)
         trades_by_date = user_tracker.get_trades_by_date(year, month)
-        return jsonify(trades_by_date)
+        # Always return a dict, even if empty - this ensures calendar always renders
+        return jsonify(trades_by_date if trades_by_date else {})
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        # Return empty dict on error so calendar still shows
+        print(f"Error in get_calendar: {e}")
+        return jsonify({})
 
 @app.route('/api/portfolio/calendar', methods=['GET'])
 def get_portfolio_calendar():
@@ -697,6 +687,29 @@ def verify_session():
             return jsonify({'authenticated': False}), 401
     except Exception as e:
         return jsonify({'authenticated': False, 'error': str(e)}), 500
+
+@app.route('/api/auth/update-name', methods=['POST'])
+def update_user_name():
+    """Update user's name"""
+    try:
+        user_id = get_current_user_id()
+        if not user_id:
+            return jsonify({'success': False, 'error': 'Not authenticated'}), 401
+        
+        data = request.json
+        new_name = data.get('name', '').strip()
+        
+        if not new_name:
+            return jsonify({'success': False, 'error': 'Name is required'}), 400
+        
+        result = auth_manager.update_user_name(user_id, new_name)
+        
+        if result.get('success'):
+            return jsonify(result), 200
+        else:
+            return jsonify(result), 400
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 if __name__ == '__main__':
     import sys

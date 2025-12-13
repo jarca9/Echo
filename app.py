@@ -77,6 +77,11 @@ def index():
     """Serve the dashboard"""
     return send_from_directory('static', 'index.html')
 
+@app.route('/favicon.png')
+def favicon():
+    """Serve the favicon"""
+    return send_from_directory('.', 'favicon.png')
+
 @app.route('/api/health', methods=['GET'])
 def health():
     """Health check endpoint"""

@@ -80,7 +80,7 @@ def index():
 @app.route('/favicon.png')
 def favicon():
     """Serve the favicon"""
-    return send_from_directory('.', 'favicon.png')
+    return send_from_directory('static', 'favicon.png')
 
 @app.route('/api/health', methods=['GET'])
 def health():

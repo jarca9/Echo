@@ -598,11 +598,34 @@ class TradeTracker:
         
         profit_factor = winning_pnl / losing_pnl if losing_pnl > 0 else (winning_pnl if winning_pnl > 0 else 0)
         
-        # Calculate average win/loss
+        # Calculate average win/loss in dollars
         wins = [p for p in all_pnls if p > 0]
         losses = [abs(p) for p in all_pnls if p < 0]
         avg_win = sum(wins) / len(wins) if wins else 0
         avg_loss = sum(losses) / len(losses) if losses else 0
+
+        # Calculate average % loss per losing trade (based on capital in the trade)
+        loss_percents = []
+        for trade in trades:
+            if trade.get('action', '').upper() not in ['SELL', 'CLOSE']:
+                continue
+            trade_pnl = self.calculate_trade_pnl(trade)
+            if trade_pnl >= 0:
+                continue  # only losing trades
+
+            sold_amount = float(trade.get('sold_amount', 0) or 0)
+            if sold_amount <= 0:
+                continue
+
+            # Effective capital in the trade ≈ sold_amount - pnl (since pnl is negative for losers)
+            cost_basis = sold_amount - trade_pnl
+            if cost_basis <= 0:
+                continue
+
+            loss_pct = abs(trade_pnl) / cost_basis * 100.0
+            loss_percents.append(loss_pct)
+
+        avg_loss_pct = sum(loss_percents) / len(loss_percents) if loss_percents else 0
         
         # Calculate expectancy
         expectancy = (win_rate / 100 * avg_win) - ((100 - win_rate) / 100 * avg_loss) if total_trades > 0 else 0
@@ -619,6 +642,7 @@ class TradeTracker:
             'profit_factor': round(profit_factor, 2),
             'avg_win': round(avg_win, 2),
             'avg_loss': round(avg_loss, 2),
+            'avg_loss_pct': round(avg_loss_pct, 2),
             'expectancy': round(expectancy, 2),
             'largest_win': round(max(wins), 2) if wins else 0,
             'largest_loss': round(max(losses), 2) if losses else 0,

@@ -2400,9 +2400,9 @@
                 
                 <div class="stat-card-large">
                     <div class="stat-card-header">
-                        <div class="stat-card-title">Average Losing Trade</div>
+                        <div class="stat-card-title">Average % Loss per Trade</div>
                     </div>
-                    <div class="stat-card-value negative" id="avgLoss">$0.00</div>
+                    <div class="stat-card-value negative" id="avgLoss">0.00%</div>
                 </div>
             </div>
 
@@ -3397,7 +3397,8 @@
                 
                 document.getElementById('profitFactor').textContent = (data.profit_factor || 0).toFixed(2);
                 document.getElementById('avgWin').textContent = formatCurrency(data.avg_win || 0);
-                document.getElementById('avgLoss').textContent = formatCurrency(data.avg_loss || 0);
+                const avgLossPct = data.avg_loss_pct || 0;
+                document.getElementById('avgLoss').textContent = `${avgLossPct.toFixed(2)}%`;
                 
                 // Update donut charts
                 loadDonutCharts(data);

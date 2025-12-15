@@ -3108,6 +3108,9 @@
                     </div>`;
 
                     dayData.trades.forEach(trade => {
+                        const tradePnl = typeof trade.pnl === 'number' ? trade.pnl : 0;
+                        const tradePnlPct = typeof trade.pnl_pct === 'number' ? trade.pnl_pct : null;
+                        const transactionFee = typeof trade.transaction_fee === 'number' ? trade.transaction_fee : 0;
                         let optionStr = '';
                         if (trade.trade_type === 'OPTION') {
                             const strikePrice = trade.strike || 0;
@@ -3128,7 +3131,7 @@
                                         <span class="trade-detail-value">${trade.quantity}</span>
                                     </div>
                                     <div class="trade-detail-item">
-                                        <span class="trade-detail-label">Buy Price:</span>
+                                        <span class="trade-detail-label">Price:</span>
                                         <span class="trade-detail-value">${formatCurrency(trade.price)}</span>
                                     </div>
                                     <div class="trade-detail-item">
@@ -3137,12 +3140,17 @@
                                     </div>
                                     <div class="trade-detail-item">
                                         <span class="trade-detail-label">Transaction Fee:</span>
-                                        <span class="trade-detail-value">${formatCurrency(2.00)}</span>
+                                        <span class="trade-detail-value">${formatCurrency(transactionFee)}</span>
                                     </div>
                                     <div class="trade-detail-item">
                                         <span class="trade-detail-label">P&L (after fee):</span>
-                                        <span class="trade-detail-value ${getPnlClass((trade.sold_amount || 0) - (trade.quantity * trade.price * 100) - 2.00)}">${formatCurrency((trade.sold_amount || 0) - (trade.quantity * trade.price * 100) - 2.00)}</span>
+                                        <span class="trade-detail-value ${getPnlClass(tradePnl)}">${formatCurrency(tradePnl)}</span>
                                     </div>
+                                    ${tradePnlPct !== null ? `
+                                    <div class="trade-detail-item">
+                                        <span class="trade-detail-label">% Win/Loss:</span>
+                                        <span class="trade-detail-value ${getPnlClass(tradePnl)}">${tradePnlPct.toFixed(2)}%</span>
+                                    </div>` : ''}
                                     <div class="trade-detail-item">
                                         <span class="trade-detail-label">Time:</span>
                                         <span class="trade-detail-value">${formatTimePST(trade.date)}</span>

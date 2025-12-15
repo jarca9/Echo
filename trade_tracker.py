@@ -406,11 +406,27 @@ class TradeTracker:
                 date_key = trade_date.strftime('%Y-%m-%d')
                 trades_by_date[date_key].append(trade)
         
-        # Calculate daily PnL (includes transaction fees)
+        # Calculate daily PnL (includes transaction fees) and per-trade PnL / % return
         result = {}
         for date_str, day_trades in trades_by_date.items():
-            # Calculate PnL for all trades (fees already included in calculate_trade_pnl)
-            day_pnl = sum(self.calculate_trade_pnl(t) for t in day_trades if t.get('action', '').upper() in ['SELL', 'CLOSE'])
+            day_pnl = 0.0
+
+            for t in day_trades:
+                action = t.get('action', '').upper()
+                if action in ['SELL', 'CLOSE']:
+                    trade_pnl = self.calculate_trade_pnl(t)
+                    day_pnl += trade_pnl
+
+                    # Attach per-trade PnL (after fees)
+                    t['pnl'] = round(trade_pnl, 2)
+
+                    # Compute % return relative to capital in the trade, if we have sold_amount
+                    sold_amount = float(t.get('sold_amount', 0) or 0)
+                    if sold_amount > 0:
+                        cost_basis = sold_amount - trade_pnl  # works for both wins and losses
+                        if cost_basis > 0:
+                            t['pnl_pct'] = round(trade_pnl / cost_basis * 100.0, 2)
+
             result[date_str] = {
                 'trades': day_trades,
                 'pnl': round(day_pnl, 2),

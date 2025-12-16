@@ -716,6 +716,66 @@ def update_user_name():
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
+@app.route('/api/auth/forgot-password', methods=['POST'])
+def forgot_password():
+    """Request a password reset"""
+    try:
+        data = request.json
+        email = data.get('email', '').strip()
+        
+        if not email:
+            return jsonify({'success': False, 'error': 'Email is required'}), 400
+        
+        result = auth_manager.request_password_reset(email)
+        
+        if result['success']:
+            return jsonify(result), 200
+        else:
+            return jsonify(result), 400
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/auth/verify-reset-code', methods=['POST'])
+def verify_reset_code():
+    """Verify the reset code"""
+    try:
+        data = request.json
+        email = data.get('email', '').strip()
+        code = data.get('code', '').strip()
+        
+        if not email or not code:
+            return jsonify({'success': False, 'error': 'Email and code are required'}), 400
+        
+        result = auth_manager.verify_reset_code(email, code)
+        
+        if result['success']:
+            return jsonify(result), 200
+        else:
+            return jsonify(result), 400
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/auth/reset-password', methods=['POST'])
+def reset_password():
+    """Reset password using email and reset code"""
+    try:
+        data = request.json
+        email = data.get('email', '').strip()
+        reset_code = data.get('reset_code', '').strip()
+        new_password = data.get('new_password', '')
+        
+        if not email or not reset_code or not new_password:
+            return jsonify({'success': False, 'error': 'Email, reset code, and new password are required'}), 400
+        
+        result = auth_manager.reset_password(email, reset_code, new_password)
+        
+        if result['success']:
+            return jsonify(result), 200
+        else:
+            return jsonify(result), 400
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 if __name__ == '__main__':
     import sys
     

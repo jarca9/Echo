@@ -222,3 +222,162 @@ class AuthManager:
             return {'success': False, 'error': f'Database error: {str(e)}'}
         finally:
             close_db(db)
+    
+    def send_reset_code_email(self, email: str, code: str) -> bool:
+        """Send password reset code via email"""
+        import smtplib
+        from email.mime.text import MIMEText
+        from email.mime.multipart import MIMEMultipart
+        import os
+        
+        # Get email settings from environment variables
+        smtp_server = os.environ.get('SMTP_SERVER', 'smtp.gmail.com')
+        smtp_port = int(os.environ.get('SMTP_PORT', '587'))
+        smtp_user = os.environ.get('SMTP_USER', '')
+        smtp_password = os.environ.get('SMTP_PASSWORD', '')
+        from_email = os.environ.get('FROM_EMAIL', smtp_user)
+        
+        # If no email configured, just print to console (for development)
+        if not smtp_user or not smtp_password:
+            print(f"[EMAIL] Password reset code for {email}: {code}")
+            print("[EMAIL] Configure SMTP_USER and SMTP_PASSWORD environment variables to send real emails")
+            return True
+        
+        try:
+            msg = MIMEMultipart()
+            msg['From'] = from_email
+            msg['To'] = email
+            msg['Subject'] = 'Echo Trading Journal - Password Reset Code'
+            
+            body = f"""
+            Your password reset code is: {code}
+            
+            This code will expire in 10 minutes.
+            
+            If you didn't request this, please ignore this email.
+            """
+            
+            msg.attach(MIMEText(body, 'plain'))
+            
+            server = smtplib.SMTP(smtp_server, smtp_port)
+            server.starttls()
+            server.login(smtp_user, smtp_password)
+            server.send_message(msg)
+            server.quit()
+            
+            return True
+        except Exception as e:
+            print(f"Error sending email: {e}")
+            # Still return True so we don't reveal if email exists
+            return True
+    
+    def request_password_reset(self, email: str) -> Dict:
+        """Generate a 4-digit password reset code and send via email"""
+        email = email.lower().strip()
+        db = get_db()
+        
+        try:
+            user = db.query(User).filter(User.email == email).first()
+            
+            # Always return success to prevent email enumeration
+            if not user:
+                return {'success': True, 'message': 'If an account exists, a reset code has been sent to your email'}
+            
+            # Generate 4-digit code
+            reset_code = f"{secrets.randbelow(10000):04d}"
+            expires_at = datetime.utcnow() + timedelta(minutes=10)  # Code expires in 10 minutes
+            
+            user.reset_code = reset_code
+            user.reset_code_expires = expires_at
+            
+            db.commit()
+            
+            # Send email with code
+            email_sent = self.send_reset_code_email(email, reset_code)
+            
+            # For development/testing: include code in response if email not configured
+            response = {
+                'success': True,
+                'message': 'A 4-digit reset code has been sent to your email. Please check your inbox.'
+            }
+            
+            # If email not configured, include code in response for testing
+            import os
+            if not os.environ.get('SMTP_USER') or not os.environ.get('SMTP_PASSWORD'):
+                response['reset_code'] = reset_code
+                response['message'] = f'A 4-digit reset code has been generated. Code: {reset_code} (Email not configured - check console or use this code)'
+            
+            return response
+        except Exception as e:
+            db.rollback()
+            return {'success': False, 'error': f'Database error: {str(e)}'}
+        finally:
+            close_db(db)
+    
+    def verify_reset_code(self, email: str, code: str) -> Dict:
+        """Verify the reset code"""
+        email = email.lower().strip()
+        db = get_db()
+        
+        try:
+            user = db.query(User).filter(User.email == email).first()
+            
+            if not user:
+                return {'success': False, 'error': 'Invalid email or code'}
+            
+            if not user.reset_code or user.reset_code != code:
+                return {'success': False, 'error': 'Invalid reset code'}
+            
+            # Check if code expired
+            if user.reset_code_expires and datetime.utcnow() > user.reset_code_expires:
+                user.reset_code = None
+                user.reset_code_expires = None
+                db.commit()
+                return {'success': False, 'error': 'Reset code has expired. Please request a new one.'}
+            
+            return {'success': True, 'message': 'Code verified successfully'}
+        except Exception as e:
+            db.rollback()
+            return {'success': False, 'error': f'Database error: {str(e)}'}
+        finally:
+            close_db(db)
+    
+    def reset_password(self, email: str, reset_code: str, new_password: str) -> Dict:
+        """Reset a user's password using email and reset code"""
+        if not email or not reset_code or not new_password:
+            return {'success': False, 'error': 'Email, reset code, and new password are required'}
+        
+        if len(new_password) < 6:
+            return {'success': False, 'error': 'Password must be at least 6 characters'}
+        
+        email = email.lower().strip()
+        db = get_db()
+        try:
+            user = db.query(User).filter(User.email == email).first()
+            
+            if not user:
+                return {'success': False, 'error': 'Invalid email or code'}
+            
+            if not user.reset_code or user.reset_code != reset_code:
+                return {'success': False, 'error': 'Invalid reset code'}
+            
+            # Check if code expired
+            if user.reset_code_expires and datetime.utcnow() > user.reset_code_expires:
+                user.reset_code = None
+                user.reset_code_expires = None
+                db.commit()
+                return {'success': False, 'error': 'Reset code has expired. Please request a new one.'}
+            
+            # Update password and clear reset code
+            user.password_hash = self.hash_password(new_password)
+            user.reset_code = None
+            user.reset_code_expires = None
+            
+            db.commit()
+            
+            return {'success': True, 'message': 'Password reset successfully'}
+        except Exception as e:
+            db.rollback()
+            return {'success': False, 'error': f'Database error: {str(e)}'}
+        finally:
+            close_db(db)

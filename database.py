@@ -64,6 +64,10 @@ class User(Base):
     password_hash = Column(String, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     last_login = Column(DateTime, nullable=True)
+    reset_token = Column(String, nullable=True)
+    reset_token_expires = Column(DateTime, nullable=True)
+    reset_code = Column(String, nullable=True)  # 4-digit code
+    reset_code_expires = Column(DateTime, nullable=True)
     
     # Relationships
     trades = relationship("Trade", back_populates="user", cascade="all, delete-orphan")

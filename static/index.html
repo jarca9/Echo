@@ -2299,6 +2299,9 @@
                 <div class="auth-switch-link">
                     Don't have an account? <a href="#" onclick="switchAuthTab('signup'); return false;">Create one</a>
                 </div>
+                <div style="text-align: center; margin-top: 12px;">
+                    <button type="button" onclick="openForgotPasswordModal()" class="auth-submit-btn" style="background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border-color);">Reset Password</button>
+                </div>
             </form>
 
             <!-- Create Account Form -->
@@ -2610,6 +2613,66 @@
                 </div>
                 <div style="text-align: center; margin-top: 16px; font-size: 0.9em; color: var(--text-secondary);">
                     Don't have an account? <a href="#" onclick="closeSignInModal(); openCreateAccountModal();" style="color: var(--accent-blue); text-decoration: none;">Create one</a>
+                </div>
+                <div style="text-align: center; margin-top: 12px;">
+                    <button type="button" onclick="closeSignInModal(); openForgotPasswordModal();" class="btn btn-secondary" style="width: 100%; font-size: 0.9em; padding: 8px;">Reset Password</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Forgot Password Modal -->
+    <div id="forgotPasswordModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Reset Password</h2>
+                <button class="close" onclick="closeForgotPasswordModal()">&times;</button>
+            </div>
+            <form id="forgotPasswordForm" onsubmit="handleForgotPassword(event)">
+                <div class="form-group">
+                    <label for="forgotPasswordEmail">Email</label>
+                    <input type="email" id="forgotPasswordEmail" placeholder="Enter your email" required>
+                </div>
+                <div id="forgotPasswordError" class="error-message" style="display: none; color: var(--accent-red); margin-bottom: 12px; font-size: 0.9em;"></div>
+                <div id="forgotPasswordSuccess" class="success-message" style="display: none; color: var(--accent-green); margin-bottom: 12px; font-size: 0.9em;"></div>
+                <div class="form-group" style="display: flex; gap: 12px; margin-top: 20px;">
+                    <button type="submit" class="btn" style="flex: 1;">Send Reset Code</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeForgotPasswordModal()" style="flex: 1;">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Reset Password Modal -->
+    <div id="resetPasswordModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Reset Password</h2>
+                <button class="close" onclick="closeResetPasswordModal()">&times;</button>
+            </div>
+            <form id="resetPasswordForm" onsubmit="handleResetPassword(event)">
+                <div class="form-group">
+                    <label for="resetEmail">Email</label>
+                    <input type="email" id="resetEmail" placeholder="Enter your email" required>
+                </div>
+                <div class="form-group">
+                    <label for="resetCode">4-Digit Code</label>
+                    <input type="text" id="resetCode" placeholder="Enter 4-digit code from email" required maxlength="4" pattern="[0-9]{4}">
+                    <small style="color: var(--text-secondary); font-size: 0.85em;">Check your email for the 4-digit code</small>
+                </div>
+                <div class="form-group">
+                    <label for="resetNewPassword">New Password</label>
+                    <input type="password" id="resetNewPassword" placeholder="Enter new password (min 6 characters)" required minlength="6">
+                </div>
+                <div class="form-group">
+                    <label for="resetConfirmPassword">Confirm New Password</label>
+                    <input type="password" id="resetConfirmPassword" placeholder="Confirm new password" required minlength="6">
+                </div>
+                <div id="resetPasswordError" class="error-message" style="display: none; color: var(--accent-red); margin-bottom: 12px; font-size: 0.9em;"></div>
+                <div id="resetPasswordSuccess" class="success-message" style="display: none; color: var(--accent-green); margin-bottom: 12px; font-size: 0.9em;"></div>
+                <div class="form-group" style="display: flex; gap: 12px; margin-top: 20px;">
+                    <button type="submit" class="btn" style="flex: 1;">Reset Password</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeResetPasswordModal()" style="flex: 1;">Cancel</button>
                 </div>
             </form>
         </div>
@@ -4807,6 +4870,208 @@
                 errorDiv.textContent = 'Network error. Please try again.';
                 errorDiv.classList.add('show');
                 console.error('Create account error:', error);
+            }
+        }
+
+        function openForgotPasswordModal() {
+            // Hide auth overlay if visible
+            const authOverlay = document.getElementById('authOverlay');
+            if (authOverlay) {
+                authOverlay.classList.add('hidden');
+            }
+            const mainContainer = document.getElementById('mainContainer');
+            if (mainContainer) {
+                mainContainer.classList.remove('blur-background');
+            }
+            
+            document.getElementById('forgotPasswordModal').style.display = 'block';
+            document.getElementById('forgotPasswordEmail').value = '';
+            document.getElementById('forgotPasswordError').style.display = 'none';
+            document.getElementById('forgotPasswordSuccess').style.display = 'none';
+        }
+
+        function closeForgotPasswordModal() {
+            document.getElementById('forgotPasswordModal').style.display = 'none';
+            // Show auth overlay again if user is not authenticated
+            if (!currentUser) {
+                const authOverlay = document.getElementById('authOverlay');
+                if (authOverlay) {
+                    authOverlay.classList.remove('hidden');
+                }
+                const mainContainer = document.getElementById('mainContainer');
+                if (mainContainer) {
+                    mainContainer.classList.add('blur-background');
+                }
+            }
+        }
+
+        function openResetPasswordModal(email = '') {
+            // Hide auth overlay if visible
+            const authOverlay = document.getElementById('authOverlay');
+            if (authOverlay) {
+                authOverlay.classList.add('hidden');
+            }
+            const mainContainer = document.getElementById('mainContainer');
+            if (mainContainer) {
+                mainContainer.classList.remove('blur-background');
+            }
+            
+            document.getElementById('resetPasswordModal').style.display = 'block';
+            document.getElementById('resetEmail').value = email;
+            document.getElementById('resetCode').value = '';
+            document.getElementById('resetNewPassword').value = '';
+            document.getElementById('resetConfirmPassword').value = '';
+            document.getElementById('resetPasswordError').style.display = 'none';
+            document.getElementById('resetPasswordSuccess').style.display = 'none';
+        }
+
+        function closeResetPasswordModal() {
+            document.getElementById('resetPasswordModal').style.display = 'none';
+            // Show auth overlay again if user is not authenticated
+            if (!currentUser) {
+                const authOverlay = document.getElementById('authOverlay');
+                if (authOverlay) {
+                    authOverlay.classList.remove('hidden');
+                }
+                const mainContainer = document.getElementById('mainContainer');
+                if (mainContainer) {
+                    mainContainer.classList.add('blur-background');
+                }
+            }
+        }
+
+        async function handleForgotPassword(event) {
+            event.preventDefault();
+            const email = document.getElementById('forgotPasswordEmail').value.trim();
+            const errorDiv = document.getElementById('forgotPasswordError');
+            const successDiv = document.getElementById('forgotPasswordSuccess');
+            
+            errorDiv.style.display = 'none';
+            successDiv.style.display = 'none';
+            
+            if (!email) {
+                errorDiv.textContent = 'Please enter your email';
+                errorDiv.style.display = 'block';
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/auth/forgot-password`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ email })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    let message = data.message || 'A 4-digit reset code has been sent to your email. Please check your inbox.';
+                    
+                    // If code is in response (email not configured), show it prominently
+                    if (data.reset_code) {
+                        message = `4-digit code: ${data.reset_code} (Email not configured - use this code to reset)`;
+                        successDiv.style.fontSize = '1.1em';
+                        successDiv.style.fontWeight = 'bold';
+                    }
+                    
+                    successDiv.textContent = message;
+                    successDiv.style.display = 'block';
+                    
+                    // Auto-open reset password modal with email pre-filled
+                    setTimeout(() => {
+                        closeForgotPasswordModal();
+                        openResetPasswordModal(email);
+                        // If code was provided, pre-fill it
+                        if (data.reset_code) {
+                            document.getElementById('resetCode').value = data.reset_code;
+                        }
+                    }, 2000);
+                } else {
+                    errorDiv.textContent = data.error || 'Failed to send reset code';
+                    errorDiv.style.display = 'block';
+                }
+            } catch (error) {
+                errorDiv.textContent = 'Network error. Please try again.';
+                errorDiv.style.display = 'block';
+                console.error('Forgot password error:', error);
+            }
+        }
+
+        async function handleResetPassword(event) {
+            event.preventDefault();
+            const email = document.getElementById('resetEmail').value.trim();
+            const resetCode = document.getElementById('resetCode').value.trim();
+            const newPassword = document.getElementById('resetNewPassword').value;
+            const confirmPassword = document.getElementById('resetConfirmPassword').value;
+            const errorDiv = document.getElementById('resetPasswordError');
+            const successDiv = document.getElementById('resetPasswordSuccess');
+            
+            errorDiv.style.display = 'none';
+            successDiv.style.display = 'none';
+            
+            if (!email || !resetCode || !newPassword || !confirmPassword) {
+                errorDiv.textContent = 'Please fill in all fields';
+                errorDiv.style.display = 'block';
+                return;
+            }
+
+            if (resetCode.length !== 4 || !/^\d{4}$/.test(resetCode)) {
+                errorDiv.textContent = 'Please enter a valid 4-digit code';
+                errorDiv.style.display = 'block';
+                return;
+            }
+
+            if (newPassword.length < 6) {
+                errorDiv.textContent = 'Password must be at least 6 characters';
+                errorDiv.style.display = 'block';
+                return;
+            }
+
+            if (newPassword !== confirmPassword) {
+                errorDiv.textContent = 'Passwords do not match';
+                errorDiv.style.display = 'block';
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/auth/reset-password`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ email, reset_code: resetCode, new_password: newPassword })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    successDiv.textContent = data.message || 'Password reset successfully! You can now sign in with your new password.';
+                    successDiv.style.display = 'block';
+                    
+                    // Close modal and show auth overlay after 2 seconds
+                    setTimeout(() => {
+                        closeResetPasswordModal();
+                        // Show auth overlay for sign in
+                        const authOverlay = document.getElementById('authOverlay');
+                        const mainContainer = document.getElementById('mainContainer');
+                        if (authOverlay && !currentUser) {
+                            authOverlay.classList.remove('hidden');
+                            switchAuthTab('signin');
+                        }
+                        if (mainContainer && !currentUser) {
+                            mainContainer.classList.add('blur-background');
+                        }
+                    }, 2000);
+                } else {
+                    errorDiv.textContent = data.error || 'Failed to reset password';
+                    errorDiv.style.display = 'block';
+                }
+            } catch (error) {
+                errorDiv.textContent = 'Network error. Please try again.';
+                errorDiv.style.display = 'block';
+                console.error('Reset password error:', error);
             }
         }
 

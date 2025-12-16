@@ -96,7 +96,9 @@ def get_pnl():
         if user_id:
             migrate_existing_data_to_user(user_id)
         user_tracker = get_user_tracker(user_id)
-        metrics = user_tracker.get_pnl_metrics()
+        # Get user timezone from request header or query param
+        user_timezone = request.headers.get('X-User-Timezone') or request.args.get('timezone')
+        metrics = user_tracker.get_pnl_metrics(user_timezone=user_timezone)
         return jsonify(metrics)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -132,13 +134,15 @@ def add_trade():
             migrate_existing_data_to_user(user_id)
         user_tracker = get_user_tracker(user_id)
         data = request.json
+        # Get user timezone from request header
+        user_timezone = request.headers.get('X-User-Timezone')
         required_fields = ['symbol', 'action', 'quantity', 'price']
         
         for field in required_fields:
             if field not in data:
                 return jsonify({'error': f'Missing required field: {field}'}), 400
         
-        trade = user_tracker.add_trade(data)
+        trade = user_tracker.add_trade(data, user_timezone=user_timezone)
         return jsonify({'success': True, 'trade': trade}), 201
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -275,6 +279,8 @@ def get_calendar():
     """Get trades for calendar view for the current user"""
     try:
         user_id = get_current_user_id()
+        # Get user timezone from request header or query param
+        user_timezone = request.headers.get('X-User-Timezone') or request.args.get('timezone')
         if not user_id:
             # Return empty calendar data if not authenticated (calendar will still show)
             return jsonify({})
@@ -282,7 +288,7 @@ def get_calendar():
         user_tracker = get_user_tracker(user_id)
         year = request.args.get('year', datetime.now().year, type=int)
         month = request.args.get('month', datetime.now().month, type=int)
-        trades_by_date = user_tracker.get_trades_by_date(year, month)
+        trades_by_date = user_tracker.get_trades_by_date(year, month, user_timezone=user_timezone)
         # Always return a dict, even if empty - this ensures calendar always renders
         return jsonify(trades_by_date if trades_by_date else {})
     except Exception as e:
@@ -335,9 +341,11 @@ def import_csv():
                     # Import Webull trades
                     imported = 0
                     errors = []
+                    # Get user timezone from request header
+                    user_timezone = request.headers.get('X-User-Timezone')
                     for trade in webull_trades:
                         try:
-                            user_tracker.add_trade(trade)
+                            user_tracker.add_trade(trade, user_timezone=user_timezone)
                             imported += 1
                         except Exception as e:
                             errors.append(str(e))
@@ -358,7 +366,9 @@ def import_csv():
                 pass  # Fallback to standard parser
             
             # Standard CSV import
-            result = user_tracker.import_csv(filepath)
+            # Get user timezone from request header
+            user_timezone = request.headers.get('X-User-Timezone')
+            result = user_tracker.import_csv(filepath, user_timezone=user_timezone)
             
             # Clean up uploaded file
             try:

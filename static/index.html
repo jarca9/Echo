@@ -2869,39 +2869,42 @@
         const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
         const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
-        // Helper function to format dates/times in PST
-        function formatDatePST(date, options = {}) {
+        // Detect user's timezone
+        const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        
+        // Helper function to format dates/times in user's timezone
+        function formatDateLocal(date, options = {}) {
             if (!date) return '';
             const dateObj = date instanceof Date ? date : new Date(date);
             return new Intl.DateTimeFormat('en-US', {
-                timeZone: 'America/Los_Angeles',
+                timeZone: userTimezone,
                 ...options
             }).format(dateObj);
         }
 
-        function formatTimePST(date) {
+        function formatTimeLocal(date) {
             if (!date) return '';
             const dateObj = date instanceof Date ? date : new Date(date);
             return new Intl.DateTimeFormat('en-US', {
-                timeZone: 'America/Los_Angeles',
+                timeZone: userTimezone,
                 hour: 'numeric',
                 minute: '2-digit',
                 hour12: true
             }).format(dateObj);
         }
 
-        // Get current datetime in PST for datetime-local input
-        function getCurrentPSTDateTime() {
-            return dateToPSTDateTimeLocal(new Date());
+        // Get current datetime in user's timezone for datetime-local input
+        function getCurrentLocalDateTime() {
+            return dateToLocalDateTimeLocal(new Date());
         }
 
-        // Convert a date to PST datetime-local format
-        function dateToPSTDateTimeLocal(date) {
+        // Convert a date to user's timezone datetime-local format
+        function dateToLocalDateTimeLocal(date) {
             if (!date) return '';
             const dateObj = date instanceof Date ? date : new Date(date);
-            // Get PST time components using Intl formatter
+            // Get local time components using Intl formatter
             const formatter = new Intl.DateTimeFormat('en-US', {
-                timeZone: 'America/Los_Angeles',
+                timeZone: userTimezone,
                 year: 'numeric',
                 month: '2-digit',
                 day: '2-digit',
@@ -2917,6 +2920,12 @@
             const minute = parts.find(p => p.type === 'minute').value;
             return `${year}-${month}-${day}T${hour}:${minute}`;
         }
+
+        // Backward compatibility aliases
+        const formatDatePST = formatDateLocal;
+        const formatTimePST = formatTimeLocal;
+        const getCurrentPSTDateTime = getCurrentLocalDateTime;
+        const dateToPSTDateTimeLocal = dateToLocalDateTimeLocal;
 
         function formatCurrency(value) {
             // Convert value from USD to selected currency
@@ -3046,8 +3055,10 @@
                 `${monthNames[currentDate.getMonth()]} ${year}`;
 
             // Always render calendar, even if API fails or returns empty data
+            const headers = getAuthHeaders();
+            headers['X-User-Timezone'] = userTimezone;
             fetch(`${API_BASE}/calendar?year=${year}&month=${month}`, {
-                headers: getAuthHeaders()
+                headers: headers
             })
                 .then(res => {
                     if (!res.ok) {
@@ -3073,11 +3084,11 @@
             const daysInMonth = lastDay.getDate();
             const startingDayOfWeek = firstDay.getDay();
             
-            // Get today's date in PST
+            // Get today's date in user's timezone
             const today = new Date();
-            const pstDate = new Date(today.toLocaleString("en-US", {timeZone: "America/Los_Angeles"}));
-            const todayPST = new Date(pstDate.getFullYear(), pstDate.getMonth(), pstDate.getDate());
-            const isCurrentMonth = todayPST.getFullYear() === year && todayPST.getMonth() === month - 1;
+            const localDate = new Date(today.toLocaleString("en-US", {timeZone: userTimezone}));
+            const todayLocal = new Date(localDate.getFullYear(), localDate.getMonth(), localDate.getDate());
+            const isCurrentMonth = todayLocal.getFullYear() === year && todayLocal.getMonth() === month - 1;
 
             let html = '<div class="calendar-grid">';
             
@@ -3101,7 +3112,7 @@
             for (let day = 1; day <= daysInMonth; day++) {
                 const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
                 const dayData = tradesData[dateStr] || { trades: [], pnl: 0, count: 0 };
-                const isToday = isCurrentMonth && day === todayPST.getDate();
+                const isToday = isCurrentMonth && day === todayLocal.getDate();
                 const dayOfWeek = (startingDayOfWeek + day - 1) % 7;
                 
                 // Add to weekly P&L
@@ -3386,9 +3397,12 @@
                 const url = isEditing ? `${API_BASE}/trades/${tradeId}` : `${API_BASE}/trades`;
                 const method = isEditing ? 'PUT' : 'POST';
                 
+                const headers = getAuthHeaders();
+                headers['X-User-Timezone'] = userTimezone;
+                headers['Content-Type'] = 'application/json';
                 const response = await fetch(url, {
                     method: method,
-                    headers: getAuthHeaders(),
+                    headers: headers,
                     body: JSON.stringify(tradeData)
                 });
 
@@ -3417,11 +3431,13 @@
             formData.append('file', file);
 
             try {
+                const headers = {
+                    'X-Session-Token': sessionToken || ''
+                };
+                headers['X-User-Timezone'] = userTimezone;
                 const response = await fetch(`${API_BASE}/import`, {
                     method: 'POST',
-                    headers: {
-                        'X-Session-Token': sessionToken || ''
-                    },
+                    headers: headers,
                     body: formData
                 });
 
@@ -3442,8 +3458,10 @@
 
         async function loadPnL() {
             try {
+                const headers = getAuthHeaders();
+                headers['X-User-Timezone'] = userTimezone;
                 const response = await fetch(`${API_BASE}/pnl`, {
-                    headers: getAuthHeaders()
+                    headers: headers
                 });
                 const data = await response.json();
                 

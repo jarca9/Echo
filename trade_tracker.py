@@ -3,6 +3,7 @@ Options Trade tracking and PnL calculation system (No API Required)
 Now using PostgreSQL database
 """
 import uuid
+import csv
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional
 from collections import defaultdict
@@ -122,13 +123,13 @@ class TradeTracker:
         """Get portfolio adjustments (property for backward compatibility)"""
         return self.load_portfolio_adjustments()
     
-    def add_trade(self, trade_data: Dict) -> Dict:
+    def add_trade(self, trade_data: Dict, user_timezone: Optional[str] = None) -> Dict:
         """Add a new options trade"""
         db = get_db()
         try:
-            # Parse date
+            # Parse date - interpret as user's timezone (from frontend) or UTC if not specified
             date_str = trade_data.get('date', datetime.now().isoformat())
-            trade_date = self._parse_date(date_str)
+            trade_date = self._parse_date(date_str, user_timezone)
             
             trade_id = str(uuid.uuid4())
             new_trade = Trade(
@@ -396,22 +397,15 @@ class TradeTracker:
         
         return portfolio_by_date
     
-    def get_trades_by_date(self, year: int, month: int) -> Dict:
+    def get_trades_by_date(self, year: int, month: int, user_timezone: Optional[str] = None) -> Dict:
         """Get trades grouped by date for calendar view"""
         trades_by_date = defaultdict(list)
         trades = self.load_trades()
-        pst = pytz.timezone('America/Los_Angeles')
         
         for trade in trades:
-            trade_date = self._parse_date(trade.get('date'))
+            trade_date = self._parse_date(trade.get('date'), user_timezone)
             
-            # Convert to PST for consistent date matching
-            if trade_date.tzinfo is None:
-                trade_date = pst.localize(trade_date)
-            elif trade_date.tzinfo != pst:
-                trade_date = trade_date.astimezone(pst)
-            
-            # Use PST date for grouping
+            # Use date for grouping (timezone-aware dates are normalized to date only)
             if trade_date.year == year and trade_date.month == month:
                 date_key = trade_date.strftime('%Y-%m-%d')
                 trades_by_date[date_key].append(trade)
@@ -429,13 +423,18 @@ class TradeTracker:
 
                     # Attach per-trade PnL (after fees)
                     t['pnl'] = round(trade_pnl, 2)
-
-                    # Compute % return relative to capital in the trade, if we have sold_amount
+                    
+                    # Calculate % win/loss for this trade
                     sold_amount = float(t.get('sold_amount', 0) or 0)
                     if sold_amount > 0:
-                        cost_basis = sold_amount - trade_pnl  # works for both wins and losses
+                        cost_basis = sold_amount - trade_pnl  # trade_pnl is negative for losers
                         if cost_basis > 0:
-                            t['pnl_pct'] = round(trade_pnl / cost_basis * 100.0, 2)
+                            pnl_pct = (trade_pnl / cost_basis) * 100.0
+                            t['pnl_pct'] = round(pnl_pct, 2)
+                        else:
+                            t['pnl_pct'] = 0.0
+                    else:
+                        t['pnl_pct'] = 0.0
 
             result[date_str] = {
                 'trades': day_trades,
@@ -545,48 +544,61 @@ class TradeTracker:
             return f"{trade.get('symbol')}_{trade.get('strike')}_{trade.get('option_type')}"
         return trade.get('symbol', '')
     
-    def _parse_date(self, date_str) -> datetime:
-        """Parse date string to datetime, interpreting as PST timezone"""
-        pst = pytz.timezone('America/Los_Angeles')
-        
+    def _parse_date(self, date_str, user_timezone: Optional[str] = None) -> datetime:
+        """Parse date string to datetime, using user's timezone if provided, otherwise UTC"""
         if not date_str:
-            return datetime.now(pst)
+            return datetime.utcnow()
         
         if isinstance(date_str, datetime):
-            # If timezone-naive, assume it's PST
+            # If timezone-naive, assume UTC
             if date_str.tzinfo is None:
-                return pst.localize(date_str)
-            # If already timezone-aware, convert to PST
-            return date_str.astimezone(pst)
+                return date_str.replace(tzinfo=pytz.UTC)
+            return date_str
         
         if isinstance(date_str, str):
             try:
                 if 'T' in date_str:
-                    # Parse ISO format (from datetime-local input)
-                    # datetime-local inputs are timezone-naive, so we interpret as PST
-                    dt = datetime.fromisoformat(date_str.replace('Z', '+00:00').split('+')[0])
-                    if dt.tzinfo is None:
-                        return pst.localize(dt)
-                    return dt.astimezone(pst)
+                    # Parse ISO format (from datetime-local input or API)
+                    # Check if timezone info is included
+                    if '+' in date_str or date_str.endswith('Z'):
+                        # Has timezone info
+                        dt = datetime.fromisoformat(date_str.replace('Z', '+00:00'))
+                        return dt
+                    else:
+                        # No timezone - interpret as user's timezone or UTC
+                        dt = datetime.fromisoformat(date_str)
+                        if user_timezone:
+                            tz = pytz.timezone(user_timezone)
+                            return tz.localize(dt)
+                        # Default to UTC for timezone-naive dates
+                        return dt.replace(tzinfo=pytz.UTC)
                 else:
                     # Parse date-only formats
                     for fmt in ['%Y-%m-%d %H:%M:%S', '%Y-%m-%d', '%m/%d/%Y %H:%M:%S', '%m/%d/%Y']:
                         try:
                             dt = datetime.strptime(date_str, fmt)
-                            # Interpret as PST
-                            return pst.localize(dt)
+                            if user_timezone:
+                                tz = pytz.timezone(user_timezone)
+                                return tz.localize(dt)
+                            # Default to UTC
+                            return dt.replace(tzinfo=pytz.UTC)
                         except:
                             continue
-            except:
-                pass
+            except Exception as e:
+                print(f"Error parsing date {date_str}: {e}")
         
-        return datetime.now(pst)
+        return datetime.utcnow()
     
-    def get_pnl_metrics(self) -> Dict:
-        """Calculate PnL metrics for different time periods"""
-        # Use PST timezone for date comparisons
-        pst = pytz.timezone('America/Los_Angeles')
-        now = datetime.now(pst)
+    def get_pnl_metrics(self, user_timezone: Optional[str] = None) -> Dict:
+        """Calculate PnL metrics for different time periods using user's timezone"""
+        # Use user's timezone if provided, otherwise UTC
+        if user_timezone:
+            tz = pytz.timezone(user_timezone)
+            now = datetime.now(tz)
+        else:
+            # Default to UTC for server-side calculations
+            now = datetime.now(pytz.UTC)
+        
         today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
         week_start = today_start - timedelta(days=now.weekday())
         month_start = today_start.replace(day=1)
@@ -602,16 +614,16 @@ class TradeTracker:
         for trade in trades:
             if trade.get('action', '').upper() in ['SELL', 'CLOSE']:
                 trade_pnl = self.calculate_trade_pnl(trade)
-                trade_date = self._parse_date(trade.get('date'))
+                trade_date = self._parse_date(trade.get('date'), user_timezone)
                 
-                # Convert trade_date to PST for comparison if it's timezone-naive
-                if trade_date.tzinfo is None:
-                    trade_date = pst.localize(trade_date)
-                elif trade_date.tzinfo != pst:
-                    trade_date = trade_date.astimezone(pst)
-                
-                # Compare dates (not times) for day/week/month filtering
-                trade_date_only = trade_date.replace(hour=0, minute=0, second=0, microsecond=0)
+                # Normalize to date only for comparison
+                if trade_date.tzinfo:
+                    trade_date_only = trade_date.replace(hour=0, minute=0, second=0, microsecond=0)
+                else:
+                    trade_date_only = trade_date.replace(hour=0, minute=0, second=0, microsecond=0)
+                    if user_timezone:
+                        tz = pytz.timezone(user_timezone)
+                        trade_date_only = tz.localize(trade_date_only)
                 
                 # For today's P&L, only include trades from today (exact date match)
                 if trade_date_only.date() == today_start.date():
@@ -661,22 +673,25 @@ class TradeTracker:
         for trade in trades:
             if trade.get('action', '').upper() not in ['SELL', 'CLOSE']:
                 continue
+            
             trade_pnl = self.calculate_trade_pnl(trade)
             if trade_pnl >= 0:
-                continue  # only losing trades
-
+                continue  # Only losing trades
+            
             sold_amount = float(trade.get('sold_amount', 0) or 0)
             if sold_amount <= 0:
                 continue
-
-            # Effective capital in the trade ≈ sold_amount - pnl (since pnl is negative for losers)
-            cost_basis = sold_amount - trade_pnl
+            
+            # Calculate cost basis and loss %
+            cost_basis = sold_amount - trade_pnl  # trade_pnl is negative for losers
             if cost_basis <= 0:
                 continue
-
+            
             loss_pct = abs(trade_pnl) / cost_basis * 100.0
-            loss_percents.append(loss_pct)
-
+            # Only include trades with actual loss (> 0.01% to exclude rounding errors)
+            if loss_pct > 0.01:
+                loss_percents.append(loss_pct)
+        
         avg_loss_pct = sum(loss_percents) / len(loss_percents) if loss_percents else 0
         
         # Calculate expectancy
@@ -758,3 +773,163 @@ class TradeTracker:
                 })
         
         return open_positions
+    
+    def import_csv(self, filepath: str) -> Dict:
+        """Import trades from CSV file"""
+        imported = 0
+        errors = []
+        
+        try:
+            with open(filepath, 'r', encoding='utf-8') as f:
+                # Try to detect delimiter
+                sample = f.read(1024)
+                f.seek(0)
+                sniffer = csv.Sniffer()
+                delimiter = sniffer.sniff(sample).delimiter
+                
+                reader = csv.DictReader(f, delimiter=delimiter)
+                
+                # Normalize column names (case-insensitive, handle common variations)
+                fieldnames = [name.strip().lower() for name in reader.fieldnames or []]
+                
+                # Map common column name variations
+                column_map = {
+                    'symbol': ['symbol', 'ticker', 'stock', 'underlying'],
+                    'action': ['action', 'side', 'type', 'transaction type', 'buy/sell'],
+                    'quantity': ['quantity', 'qty', 'shares', 'contracts', 'size'],
+                    'price': ['price', 'fill price', 'execution price', 'avg price', 'fill'],
+                    'date': ['date', 'time', 'datetime', 'execution date', 'trade date', 'timestamp'],
+                    'strike': ['strike', 'strike price', 'strike_price'],
+                    'option_type': ['option type', 'option_type', 'call/put', 'put/call', 'type'],
+                    'expiration': ['expiration', 'expiry', 'expiration date', 'exp_date'],
+                    'transaction_fee': ['fee', 'commission', 'transaction fee', 'transaction_fee', 'fees'],
+                    'sold_amount': ['sold amount', 'sold_amount', 'proceeds', 'total']
+                }
+                
+                # Create mapping from normalized fieldnames to standard names
+                field_mapping = {}
+                for standard_name, variations in column_map.items():
+                    for field in fieldnames:
+                        if field in variations:
+                            field_mapping[field] = standard_name
+                            break
+                
+                for row_num, row in enumerate(reader, start=2):  # Start at 2 (header is row 1)
+                    try:
+                        # Map row data using field_mapping
+                        trade_data = {}
+                        for csv_field, value in row.items():
+                            csv_field_lower = csv_field.strip().lower()
+                            if csv_field_lower in field_mapping:
+                                standard_field = field_mapping[csv_field_lower]
+                                trade_data[standard_field] = value.strip() if value else ''
+                        
+                        # Skip empty rows
+                        if not any(trade_data.values()):
+                            continue
+                        
+                        # Validate required fields
+                        if not trade_data.get('symbol'):
+                            errors.append(f"Row {row_num}: Missing symbol")
+                            continue
+                        
+                        if not trade_data.get('action'):
+                            errors.append(f"Row {row_num}: Missing action")
+                            continue
+                        
+                        # Parse and validate quantity
+                        try:
+                            quantity = float(trade_data.get('quantity', 0))
+                            if quantity <= 0:
+                                errors.append(f"Row {row_num}: Invalid quantity")
+                                continue
+                        except (ValueError, TypeError):
+                            errors.append(f"Row {row_num}: Invalid quantity format")
+                            continue
+                        
+                        # Parse and validate price
+                        try:
+                            price = float(trade_data.get('price', 0))
+                            if price <= 0:
+                                errors.append(f"Row {row_num}: Invalid price")
+                                continue
+                        except (ValueError, TypeError):
+                            errors.append(f"Row {row_num}: Invalid price format")
+                            continue
+                        
+                        # Parse date - try multiple formats
+                        date_str = trade_data.get('date', '')
+                        if not date_str:
+                            # Use current date if not provided
+                            date_str = datetime.now().isoformat()
+                        else:
+                            # Try to parse common date formats
+                            date_parsed = False
+                            for fmt in [
+                                '%Y-%m-%d %H:%M:%S',
+                                '%Y-%m-%d',
+                                '%m/%d/%Y %H:%M:%S',
+                                '%m/%d/%Y',
+                                '%Y-%m-%dT%H:%M:%S',
+                                '%Y-%m-%dT%H:%M:%S.%f'
+                            ]:
+                                try:
+                                    dt = datetime.strptime(date_str, fmt)
+                                    date_str = dt.isoformat()
+                                    date_parsed = True
+                                    break
+                                except:
+                                    continue
+                            
+                            if not date_parsed:
+                                errors.append(f"Row {row_num}: Could not parse date '{date_str}'")
+                                continue
+                        
+                        # Build trade dict
+                        trade = {
+                            'symbol': trade_data.get('symbol', '').upper(),
+                            'action': trade_data.get('action', '').upper(),
+                            'quantity': quantity,
+                            'price': price,
+                            'date': date_str,
+                            'trade_type': 'OPTION' if trade_data.get('strike') or trade_data.get('option_type') else 'STOCK',
+                            'transaction_fee': float(trade_data.get('transaction_fee', 0) or 0),
+                            'sold_amount': float(trade_data.get('sold_amount', 0) or 0),
+                            'notes': trade_data.get('notes', '')
+                        }
+                        
+                        # Add option-specific fields if present
+                        if trade_data.get('strike'):
+                            try:
+                                trade['strike'] = float(trade_data.get('strike'))
+                            except:
+                                pass
+                        
+                        if trade_data.get('option_type'):
+                            trade['option_type'] = trade_data.get('option_type', '').upper()
+                        
+                        if trade_data.get('expiration'):
+                            trade['expiration'] = trade_data.get('expiration', '')
+                        
+                        # Calculate sold_amount for SELL trades if not provided
+                        if trade['action'] in ['SELL', 'CLOSE'] and not trade.get('sold_amount'):
+                            if trade['trade_type'] == 'OPTION':
+                                trade['sold_amount'] = trade['quantity'] * trade['price'] * 100
+                            else:
+                                trade['sold_amount'] = trade['quantity'] * trade['price']
+                        
+                        # Add the trade with timezone
+                        self.add_trade(trade, user_timezone=user_timezone)
+                        imported += 1
+                        
+                    except Exception as e:
+                        errors.append(f"Row {row_num}: {str(e)}")
+                        continue
+        
+        except Exception as e:
+            errors.append(f"CSV file error: {str(e)}")
+        
+        return {
+            'imported': imported,
+            'errors': errors
+        }

@@ -7,6 +7,7 @@ from datetime import datetime, timedelta
 from typing import Dict, List, Optional
 from collections import defaultdict
 from database import get_db, close_db, Trade, PortfolioHistory, PortfolioAdjustment
+import pytz
 
 class TradeTracker:
     """Tracks options trades and calculates PnL metrics - uses PostgreSQL"""
@@ -399,9 +400,18 @@ class TradeTracker:
         """Get trades grouped by date for calendar view"""
         trades_by_date = defaultdict(list)
         trades = self.load_trades()
+        pst = pytz.timezone('America/Los_Angeles')
         
         for trade in trades:
             trade_date = self._parse_date(trade.get('date'))
+            
+            # Convert to PST for consistent date matching
+            if trade_date.tzinfo is None:
+                trade_date = pst.localize(trade_date)
+            elif trade_date.tzinfo != pst:
+                trade_date = trade_date.astimezone(pst)
+            
+            # Use PST date for grouping
             if trade_date.year == year and trade_date.month == month:
                 date_key = trade_date.strftime('%Y-%m-%d')
                 trades_by_date[date_key].append(trade)
@@ -536,31 +546,47 @@ class TradeTracker:
         return trade.get('symbol', '')
     
     def _parse_date(self, date_str) -> datetime:
-        """Parse date string to datetime"""
+        """Parse date string to datetime, interpreting as PST timezone"""
+        pst = pytz.timezone('America/Los_Angeles')
+        
         if not date_str:
-            return datetime.now()
+            return datetime.now(pst)
         
         if isinstance(date_str, datetime):
-            return date_str
+            # If timezone-naive, assume it's PST
+            if date_str.tzinfo is None:
+                return pst.localize(date_str)
+            # If already timezone-aware, convert to PST
+            return date_str.astimezone(pst)
         
         if isinstance(date_str, str):
             try:
                 if 'T' in date_str:
-                    return datetime.fromisoformat(date_str.replace('Z', '+00:00').split('+')[0])
+                    # Parse ISO format (from datetime-local input)
+                    # datetime-local inputs are timezone-naive, so we interpret as PST
+                    dt = datetime.fromisoformat(date_str.replace('Z', '+00:00').split('+')[0])
+                    if dt.tzinfo is None:
+                        return pst.localize(dt)
+                    return dt.astimezone(pst)
                 else:
+                    # Parse date-only formats
                     for fmt in ['%Y-%m-%d %H:%M:%S', '%Y-%m-%d', '%m/%d/%Y %H:%M:%S', '%m/%d/%Y']:
                         try:
-                            return datetime.strptime(date_str, fmt)
+                            dt = datetime.strptime(date_str, fmt)
+                            # Interpret as PST
+                            return pst.localize(dt)
                         except:
                             continue
             except:
                 pass
         
-        return datetime.now()
+        return datetime.now(pst)
     
     def get_pnl_metrics(self) -> Dict:
         """Calculate PnL metrics for different time periods"""
-        now = datetime.now()
+        # Use PST timezone for date comparisons
+        pst = pytz.timezone('America/Los_Angeles')
+        now = datetime.now(pst)
         today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
         week_start = today_start - timedelta(days=now.weekday())
         month_start = today_start.replace(day=1)
@@ -578,11 +604,21 @@ class TradeTracker:
                 trade_pnl = self.calculate_trade_pnl(trade)
                 trade_date = self._parse_date(trade.get('date'))
                 
-                if trade_date >= today_start:
+                # Convert trade_date to PST for comparison if it's timezone-naive
+                if trade_date.tzinfo is None:
+                    trade_date = pst.localize(trade_date)
+                elif trade_date.tzinfo != pst:
+                    trade_date = trade_date.astimezone(pst)
+                
+                # Compare dates (not times) for day/week/month filtering
+                trade_date_only = trade_date.replace(hour=0, minute=0, second=0, microsecond=0)
+                
+                # For today's P&L, only include trades from today (exact date match)
+                if trade_date_only.date() == today_start.date():
                     day_pnl += trade_pnl
-                if trade_date >= week_start:
+                if trade_date_only >= week_start:
                     week_pnl += trade_pnl
-                if trade_date >= month_start:
+                if trade_date_only >= month_start:
                     month_pnl += trade_pnl
                 all_time_pnl += trade_pnl
         

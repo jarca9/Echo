@@ -357,6 +357,10 @@ class AuthManager:
             if not user:
                 return {'success': False, 'error': 'Invalid email or code'}
             
+            # Store user ID for verification after update
+            user_id = user.id
+            user_email = user.email
+            
             if not user.reset_code or user.reset_code != reset_code:
                 return {'success': False, 'error': 'Invalid reset code'}
             
@@ -367,16 +371,26 @@ class AuthManager:
                 db.commit()
                 return {'success': False, 'error': 'Reset code has expired. Please request a new one.'}
             
-            # Update password and clear reset code
+            # Update password and clear reset code (ONLY these fields)
             user.password_hash = self.hash_password(new_password)
             user.reset_code = None
             user.reset_code_expires = None
             
             db.commit()
             
+            # Verify user still exists after commit
+            db.refresh(user)
+            if not user or user.id != user_id:
+                print(f"ERROR: User account issue after password reset for {email}")
+                db.rollback()
+                return {'success': False, 'error': 'Account verification failed. Please contact support.'}
+            
             return {'success': True, 'message': 'Password reset successfully'}
         except Exception as e:
             db.rollback()
+            print(f"ERROR in reset_password for {email}: {str(e)}")
+            import traceback
+            traceback.print_exc()
             return {'success': False, 'error': f'Database error: {str(e)}'}
         finally:
             close_db(db)

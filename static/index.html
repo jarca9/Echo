@@ -4993,11 +4993,16 @@
                 if (data.success) {
                     let message = data.message || 'A 4-digit reset code has been sent to your email. Please check your inbox.';
                     
-                    // If code is in response (email not configured), show it prominently
+                    // If code is in response (email not configured for development), show it prominently
                     if (data.reset_code) {
-                        message = `4-digit code: ${data.reset_code} (Email not configured - use this code to reset)`;
+                        message = `Development mode: Your reset code is ${data.reset_code}. In production, check your email.`;
                         successDiv.style.fontSize = '1.1em';
                         successDiv.style.fontWeight = 'bold';
+                        successDiv.style.color = '#ffa500'; // Orange for dev mode
+                    } else {
+                        // Email was sent successfully - show success message
+                        message = 'A 4-digit reset code has been sent to your email. Please check your inbox (and spam folder).';
+                        successDiv.style.color = 'var(--accent-green)';
                     }
                     
                     successDiv.textContent = message;
@@ -5007,9 +5012,14 @@
                     setTimeout(() => {
                         closeForgotPasswordModal();
                         openResetPasswordModal(email);
-                        // If code was provided, pre-fill it
+                        // Only pre-fill code if it was provided (dev mode)
                         if (data.reset_code) {
                             document.getElementById('resetCode').value = data.reset_code;
+                            // Show a helpful message in the reset modal
+                            const resetErrorDiv = document.getElementById('resetPasswordError');
+                            resetErrorDiv.textContent = 'Note: Email not configured. Code is pre-filled for testing.';
+                            resetErrorDiv.style.color = '#ffa500';
+                            resetErrorDiv.style.display = 'block';
                         }
                     }, 2000);
                 } else {

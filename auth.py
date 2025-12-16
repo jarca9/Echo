@@ -4,6 +4,7 @@ Now using PostgreSQL database
 """
 import hashlib
 import secrets
+import os
 from datetime import datetime, timedelta
 from typing import Dict, Optional
 from database import get_db, close_db, User, Session
@@ -228,7 +229,6 @@ class AuthManager:
         import smtplib
         from email.mime.text import MIMEText
         from email.mime.multipart import MIMEMultipart
-        import os
         
         # Get email settings from environment variables
         smtp_server = os.environ.get('SMTP_SERVER', 'smtp.gmail.com')
@@ -241,7 +241,7 @@ class AuthManager:
         if not smtp_user or not smtp_password:
             print(f"[EMAIL] Password reset code for {email}: {code}")
             print("[EMAIL] Configure SMTP_USER and SMTP_PASSWORD environment variables to send real emails")
-            return True
+            return False  # Return False to indicate email was not sent
         
         try:
             msg = MIMEMultipart()
@@ -249,15 +249,45 @@ class AuthManager:
             msg['To'] = email
             msg['Subject'] = 'Echo Trading Journal - Password Reset Code'
             
-            body = f"""
-            Your password reset code is: {code}
-            
-            This code will expire in 10 minutes.
-            
-            If you didn't request this, please ignore this email.
+            # Create a nicer HTML email
+            html_body = f"""
+            <html>
+                <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+                    <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+                        <h2 style="color: #6c5ce7;">Password Reset Code</h2>
+                        <p>You requested to reset your password for your Echo Trading Journal account.</p>
+                        <div style="background-color: #f4f4f4; padding: 20px; border-radius: 8px; text-align: center; margin: 20px 0;">
+                            <p style="font-size: 14px; color: #666; margin: 0 0 10px 0;">Your reset code is:</p>
+                            <p style="font-size: 32px; font-weight: bold; color: #6c5ce7; letter-spacing: 4px; margin: 0;">{code}</p>
+                        </div>
+                        <p style="color: #666; font-size: 14px;">This code will expire in <strong>10 minutes</strong>.</p>
+                        <p style="color: #666; font-size: 14px;">If you didn't request this password reset, please ignore this email.</p>
+                        <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
+                        <p style="color: #999; font-size: 12px;">This is an automated message from Echo Trading Journal.</p>
+                    </div>
+                </body>
+            </html>
             """
             
-            msg.attach(MIMEText(body, 'plain'))
+            # Plain text version for email clients that don't support HTML
+            text_body = f"""
+Password Reset Code
+
+You requested to reset your password for your Echo Trading Journal account.
+
+Your reset code is: {code}
+
+This code will expire in 10 minutes.
+
+If you didn't request this password reset, please ignore this email.
+
+---
+This is an automated message from Echo Trading Journal.
+            """
+            
+            # Attach both HTML and plain text versions
+            msg.attach(MIMEText(text_body, 'plain'))
+            msg.attach(MIMEText(html_body, 'html'))
             
             server = smtplib.SMTP(smtp_server, smtp_port)
             server.starttls()
@@ -265,11 +295,14 @@ class AuthManager:
             server.send_message(msg)
             server.quit()
             
+            print(f"[EMAIL] Password reset code sent successfully to {email}")
             return True
         except Exception as e:
-            print(f"Error sending email: {e}")
-            # Still return True so we don't reveal if email exists
-            return True
+            print(f"[EMAIL] Error sending email to {email}: {e}")
+            import traceback
+            traceback.print_exc()
+            # Return False to indicate email sending failed
+            return False
     
     def request_password_reset(self, email: str) -> Dict:
         """Generate a 4-digit password reset code and send via email"""
@@ -298,15 +331,22 @@ class AuthManager:
             
             db.commit()
             
-            # Send email with code (if SMTP configured)
-            self.send_reset_code_email(email, reset_code)
+            # Send email with code
+            email_sent = self.send_reset_code_email(email, reset_code)
             
-            # Always include reset_code in response so ALL users see the same behavior
-            return {
+            # Only include reset_code in response if email is NOT configured (for development/testing)
+            # This prevents exposing codes in production
+            response = {
                 'success': True,
-                'message': 'A 4-digit reset code has been sent to your email. Please check your inbox.',
-                'reset_code': reset_code
+                'message': 'A 4-digit reset code has been sent to your email. Please check your inbox.'
             }
+            
+            # Only include code in response if email sending failed/not configured
+            if not email_sent or not os.environ.get('SMTP_USER') or not os.environ.get('SMTP_PASSWORD'):
+                response['reset_code'] = reset_code
+                response['message'] = f'A 4-digit reset code has been generated. Code: {reset_code} (Email not configured - check console or use this code)'
+            
+            return response
         except Exception as e:
             db.rollback()
             return {'success': False, 'error': f'Database error: {str(e)}'}

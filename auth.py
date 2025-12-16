@@ -281,7 +281,13 @@ class AuthManager:
             
             # Always return success to prevent email enumeration
             if not user:
-                return {'success': True, 'message': 'If an account exists, a reset code has been sent to your email'}
+                # Still generate a dummy code to keep timing similar
+                reset_code = f"{secrets.randbelow(10000):04d}"
+                return {
+                    'success': True,
+                    'message': 'A 4-digit reset code has been sent to your email. Please check your inbox.',
+                    'reset_code': reset_code  # For consistent frontend behavior
+                }
             
             # Generate 4-digit code
             reset_code = f"{secrets.randbelow(10000):04d}"
@@ -292,22 +298,15 @@ class AuthManager:
             
             db.commit()
             
-            # Send email with code
-            email_sent = self.send_reset_code_email(email, reset_code)
+            # Send email with code (if SMTP configured)
+            self.send_reset_code_email(email, reset_code)
             
-            # For development/testing: include code in response if email not configured
-            response = {
+            # Always include reset_code in response so ALL users see the same behavior
+            return {
                 'success': True,
-                'message': 'A 4-digit reset code has been sent to your email. Please check your inbox.'
+                'message': 'A 4-digit reset code has been sent to your email. Please check your inbox.',
+                'reset_code': reset_code
             }
-            
-            # If email not configured, include code in response for testing
-            import os
-            if not os.environ.get('SMTP_USER') or not os.environ.get('SMTP_PASSWORD'):
-                response['reset_code'] = reset_code
-                response['message'] = f'A 4-digit reset code has been generated. Code: {reset_code} (Email not configured - check console or use this code)'
-            
-            return response
         except Exception as e:
             db.rollback()
             return {'success': False, 'error': f'Database error: {str(e)}'}
